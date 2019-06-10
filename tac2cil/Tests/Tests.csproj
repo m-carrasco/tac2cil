@@ -103,6 +103,10 @@
       <Project>{f08216ad-e55c-44b1-a253-ab8b024b7597}</Project>
       <Name>Model</Name>
     </ProjectReference>
+    <ProjectReference Include="..\CodeGenerator\CodeGenerator.csproj">
+      <Project>{f5d90666-1bbe-4207-bbd4-ece7c696c737}</Project>
+      <Name>CodeGenerator</Name>
+    </ProjectReference>
     <ProjectReference Include="..\tac2cil\tac2cil.csproj">
       <Project>{cf297740-84f5-4b92-aa68-d74b9360776b}</Project>
       <Name>tac2cil</Name>

@@ -3,15 +3,12 @@ using Backend.Transformations;
 using Model;
 using Model.Types;
 using NUnit.Framework;
-using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using tac2cil.Assembler;
 
 namespace Tests
-{ 
+{
     public class Tests
     {
         private void TransformToTac(MethodDefinition method)
@@ -88,6 +85,63 @@ namespace Tests
 
             Assembler assembler = new Assembler(mainMethod.Body);
             var bytecodeBody = assembler.Execute();
+        }
+
+        [Test]
+        public void ExportTest()
+        {
+            string source = @"
+                            using System;
+                            using System.Collections.Generic;
+                            using System.Linq;
+                            using System.Text.RegularExpressions;
+
+                            namespace Test
+                            {
+                                public class Program
+                                {
+                                    public static void Main(string[] args)
+                                    {
+                                       int a=10;
+                                       int b=10;
+                                       int c=a + b;
+                                    }
+                                }
+                            }";
+
+
+            Compiler compiler = new Compiler();
+            var output = compiler.CompileSource(source);
+
+            Host host = new Host();
+            ILoader provider = new CCIProvider.Loader(host);
+            provider.LoadAssembly(output);
+
+            var allDefinedMethods = from a in host.Assemblies
+                                    from t in a.RootNamespace.GetAllTypes()
+                                    from m in t.Members.OfType<MethodDefinition>()
+                                    where m.HasBody && m.Name.Contains("Main")
+                                    select m;
+
+            MethodDefinition mainMethod = allDefinedMethods.First();
+            MethodBody originalBytecodeBody = mainMethod.Body;
+            TransformToTac(mainMethod);
+
+            Assembler assembler = new Assembler(mainMethod.Body);
+            var bytecodeBody = assembler.Execute();
+
+            mainMethod.Body = bytecodeBody;
+
+            CodeGenerator.CodeGenerator exporter = new CodeGenerator.CodeGenerator(host);
+            string outputDir = GetTemporaryDirectory();
+
+            exporter.GenerateAssemblies(outputDir);
+        }
+        private string GetTemporaryDirectory()
+        {
+            string tempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+            Directory.CreateDirectory(tempDirectory);
+            return tempDirectory;
         }
     }
 }
