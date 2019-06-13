@@ -1,214 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using Model;
-using Model.ThreeAddressCode.Values;
-using Model.Types;
+﻿using Model.ThreeAddressCode.Values;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using MethodAttributes = Mono.Cecil.MethodAttributes;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.Contracts;
+using System.Linq;
 
-namespace CodeGenerator
+namespace CodeGenerator.CecilCodeGenerator
 {
-    public class CodeGenerator : ICodeGenerator
-    {
-        private readonly Model.Host host;
-        public CodeGenerator(Model.Host h)
-        {
-            host = h;
-        }
-
-        public Model.Host Host
-        {
-            get { return host; }
-        }
-
-        private IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap = 
-            new Dictionary<Model.Assembly, AssemblyDefinition>();
-        
-        public void GenerateAssemblies(string pathToFolder)
-        {
-            foreach (var analysisNetAssembly in host.Assemblies)
-            {
-                string moduleName = analysisNetAssembly.Name;
-                ModuleKind moduleKind = ModuleKind.Dll;
-
-                AssemblyDefinition cecilAssembly = AssemblyDefinition.CreateAssembly(
-                    new AssemblyNameDefinition(analysisNetAssembly.Name, new Version(1, 0, 0, 0)), moduleName, moduleKind);
-
-                assembliesMap[analysisNetAssembly] = cecilAssembly;
-            }
-
-            foreach (var keyval in assembliesMap)
-            {
-                var cecilAssembly = keyval.Value;
-                var analysisNetAssembly = keyval.Key;
-
-                ModuleDefinition module = cecilAssembly.MainModule;
-
-                TypeReferenceGenerator typeReferenceGenerator = new TypeReferenceGenerator(module, assembliesMap, host);
-
-                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
-                {
-                    TypeDefinitionGenerator typeDefGen = new TypeDefinitionGenerator(analysisNetType, module, typeReferenceGenerator);
-                    module.Types.Add(typeDefGen.Generate());
-                }
-            }
-
-            foreach (var assembly in assembliesMap.Values)
-            {
-                assembly.Write(Path.Combine(pathToFolder, assembly.Name.Name));
-            }
-        }
-    }
-    class TypeDefinitionGenerator
-    {
-        private ITypeDefinition def;
-        private ModuleDefinition module;
-        private TypeReferenceGenerator typeReferenceGenerator;
-
-        public TypeDefinitionGenerator(Model.Types.ITypeDefinition def, ModuleDefinition module, TypeReferenceGenerator typeReferenceGenerator)
-        {
-            this.def = def;
-            this.module = module;
-            this.typeReferenceGenerator = typeReferenceGenerator;
-        }
-
-        public TypeDefinition Generate()
-        {
-            ITypeDefinition typeDefinition = def;
-
-            if (typeDefinition is Model.Types.StructDefinition structDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.EnumDefinition enumDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.InterfaceDefinition interfaceDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.ClassDefinition typeDef)
-            {
-                string namespaceName = typeDef.ContainingNamespace.ContainingNamespace.Name;
-                var t = new TypeDefinition(namespaceName, typeDef.Name,
-                    Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public, typeReferenceGenerator.GenerateTypeReference(typeDef.Base));
-
-                foreach (var methodDefinition in typeDef.Methods)
-                {
-                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator);
-                    t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
-                }
-
-                foreach (var inter in typeDef.Interfaces)
-                    t.Interfaces.Add(new InterfaceImplementation(typeReferenceGenerator.GenerateTypeReference(inter)));
-
-                return t;
-            }
-
-            throw new NotImplementedException();
-        }
-    }
-
-    class TypeReferenceGenerator
-    {
-        private ModuleDefinition currentModule;
-        private IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap;
-        private Host host;
-        public TypeReferenceGenerator(ModuleDefinition moduleDefinition, IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap, Host host)
-        {
-            this.currentModule = moduleDefinition;
-            this.assembliesMap = assembliesMap;
-            this.host = host;
-        }
-
-        public TypeReference GenerateTypeReference(Model.Types.IBasicType basicType)
-        {
-            if (basicType.Equals(Model.Types.PlatformTypes.Object))
-                return currentModule.TypeSystem.Object;
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Void))
-                return currentModule.TypeSystem.Void;
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Int32))
-                return currentModule.TypeSystem.Int32;
-
-            ModuleDefinition moduleDefinition = basicType is Model.Types.ITypeDefinition typeDef ? ModuleDefinitionForTypeDefinition(typeDef) : null;
-            IMetadataScope metadataScope = null;
-
-            TypeReference typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, moduleDefinition, metadataScope);
-
-            return typeReference;
-        }
-
-        public TypeReference GenerateTypeReference(Model.Types.IType type)
-        {
-            if (type is IBasicType basicType)
-            {
-                //StructDefinition
-                //EnumDefinition
-                //InterfaceDefinition
-                //ClassDefinition 
-                //BasicType
-
-                return GenerateTypeReference(basicType);
-            }
-
-            if (type is GenericParameterReference genericParameterReference)
-            {
-                throw new NotImplementedException();
-            }
-
-            if (type is Model.Types.GenericParameter genericParameter)
-            {
-                throw new NotImplementedException();
-            }
-
-            if (type is Model.Types.FunctionPointerType functionPointerType)
-            {
-                throw new NotImplementedException();
-            }
-
-            if (type is Model.Types.PointerType pointerType)
-            {
-                throw new NotImplementedException();
-            }
-
-            if (type is Model.Types.ArrayType arrayType)
-            {
-                throw new NotImplementedException();
-            }
-
-            if (type is UnknownType unknownType)
-            {
-                throw new NotImplementedException();
-            }
-
-            throw new NotImplementedException();
-        }
-
-        private ModuleDefinition ModuleDefinitionForTypeDefinition(ITypeDefinition typeDefinition)
-        {
-            // the type definition must be in some of the loaded assemblies
-            // we are going to look for its containing module
-
-            var containingAssembly = host.ResolveReference(typeDefinition.ContainingAssembly);
-            Contract.Assert(containingAssembly != null);
-
-            ModuleDefinition moduleDef = assembliesMap[containingAssembly].MainModule;
-            Contract.Assert(moduleDef != null);
-
-            return moduleDef;
-        }
-    }
-
     class MethodDefinitionGenerator
     {
         private Model.Types.MethodDefinition methodDefinition;
@@ -220,7 +19,7 @@ namespace CodeGenerator
             this.typeReferenceGenerator = typeReferenceGenerator;
 
             Contract.Assert(methodDefinition != null);
-            Contract.Assert(methodDefinition.Body.Kind == MethodBodyKind.Bytecode);
+            Contract.Assert(methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
         }
 
         private Mono.Cecil.MethodAttributes GenerateMethodAttributes()
@@ -255,7 +54,7 @@ namespace CodeGenerator
 
             int idx = 0;
             IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
-            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables.Where(v=> !v.IsParameter))
+            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables.Where(v => !v.IsParameter))
             {
                 if (localVariable.Type is Model.Types.PointerType)
                     throw new NotImplementedException(); // we should specify if it is in/ref?
@@ -290,7 +89,7 @@ namespace CodeGenerator
             private IDictionary<IVariable, ParameterDefinition> parameterDefinitions;
 
             public BytecodeTranslator(Mono.Cecil.MethodDefinition methodDefinition,
-                IDictionary<IVariable, VariableDefinition> variableDefinitions, 
+                IDictionary<IVariable, VariableDefinition> variableDefinitions,
                 IDictionary<IVariable, ParameterDefinition> parameterDefinitions)
             {
                 this.methodDefinition = methodDefinition;
@@ -298,8 +97,8 @@ namespace CodeGenerator
                 this.variableDefinitions = variableDefinitions;
                 this.parameterDefinitions = parameterDefinitions;
             }
-            
-        public override void Visit(Model.Bytecode.BasicInstruction instruction)
+
+            public override void Visit(Model.Bytecode.BasicInstruction instruction)
             {
                 Nullable<Mono.Cecil.Cil.OpCode> op = null;
                 switch (instruction.Operation)
@@ -308,13 +107,16 @@ namespace CodeGenerator
                         if (instruction.OverflowCheck && instruction.UnsignedOperands)
                         {
                             op = Mono.Cecil.Cil.OpCodes.Add_Ovf_Un;
-                        } else if (instruction.OverflowCheck && !instruction.UnsignedOperands)
+                        }
+                        else if (instruction.OverflowCheck && !instruction.UnsignedOperands)
                         {
                             op = Mono.Cecil.Cil.OpCodes.Add_Ovf;
-                        } else if (!instruction.OverflowCheck && instruction.UnsignedOperands)
+                        }
+                        else if (!instruction.OverflowCheck && instruction.UnsignedOperands)
                         {
                             op = Mono.Cecil.Cil.OpCodes.Add;
-                        } else if (!instruction.OverflowCheck && !instruction.UnsignedOperands)
+                        }
+                        else if (!instruction.OverflowCheck && !instruction.UnsignedOperands)
                         {
                             op = Mono.Cecil.Cil.OpCodes.Add;
                         }
@@ -347,7 +149,8 @@ namespace CodeGenerator
                     else
                         processor.Emit(Mono.Cecil.Cil.OpCodes.Ldloc, variableDefinitions[variable]);
 
-                } else if (instruction.Operation == Model.Bytecode.LoadOperation.Value)
+                }
+                else if (instruction.Operation == Model.Bytecode.LoadOperation.Value)
                 {
                     if (instruction.Operand is Constant constant)
                     {
@@ -374,23 +177,28 @@ namespace CodeGenerator
                         else if (constant.Value is double asDouble)
                         {
                             processor.Emit(Mono.Cecil.Cil.OpCodes.Ldc_I4, asDouble);
-                        } else if (constant.Value is string asString)
+                        }
+                        else if (constant.Value is string asString)
                         {
                             processor.Emit(Mono.Cecil.Cil.OpCodes.Ldc_I4, asString);
                         }
                         else
                             throw new NotImplementedException();
 
-                    } else if (instruction.Operand is IVariable variable)
+                    }
+                    else if (instruction.Operand is IVariable variable)
                     {
                         throw new NotImplementedException();
-                    } else if (instruction.Operand is UnknownValue unk)
+                    }
+                    else if (instruction.Operand is UnknownValue unk)
                     {
                         throw new NotImplementedException();
-                    } else
+                    }
+                    else
                         throw new NotImplementedException();
 
-                } else
+                }
+                else
                     throw new NotImplementedException();
             }
 

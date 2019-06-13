@@ -132,7 +132,7 @@ namespace Tests
 
             mainMethod.Body = bytecodeBody;
 
-            CodeGenerator.CodeGenerator exporter = new CodeGenerator.CodeGenerator(host);
+            CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
             string outputDir = GetTemporaryDirectory();
 
             exporter.GenerateAssemblies(outputDir);
