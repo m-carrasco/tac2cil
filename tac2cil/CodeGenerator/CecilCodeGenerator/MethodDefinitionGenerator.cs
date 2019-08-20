@@ -246,7 +246,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     typeReferenceGenerator.GenerateTypeReference(instruction.Method.ReturnType),
                     typeReferenceGenerator.GenerateTypeReference(instruction.Method.ContainingType));
 
-                //methodReference = typeReferenceGenerator.GenerteMethodReference(methodReference);
+                foreach (var param in instruction.Method.Parameters)
+                    methodReference.Parameters.Add(new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(param.Type)));
 
                 if (instruction.Operation == Model.Bytecode.MethodCallOperation.Static)
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Call, methodReference);
