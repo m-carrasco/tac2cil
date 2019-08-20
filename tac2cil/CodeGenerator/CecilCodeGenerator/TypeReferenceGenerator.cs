@@ -30,10 +30,41 @@ namespace CodeGenerator.CecilCodeGenerator
             if (basicType.Equals(Model.Types.PlatformTypes.Int32))
                 return currentModule.TypeSystem.Int32;
 
-            ModuleDefinition moduleDefinition = basicType is Model.Types.ITypeDefinition typeDef ? ModuleDefinitionForTypeDefinition(typeDef) : null;
-            IMetadataScope metadataScope = null;
+            if (basicType.Equals(Model.Types.PlatformTypes.String))
+                return currentModule.TypeSystem.String;
 
-            TypeReference typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, moduleDefinition, metadataScope);
+            
+            ITypeDefinition def = host.ResolveReference(basicType);
+
+            TypeReference typeReference = null;
+            // is a reference to a type in an assembly loaded by analysis-net?
+            if (def != null) // yes, it is loaded by analysis-net
+            {
+                ModuleDefinition moduleDefinition = ModuleDefinitionForTypeDefinition(def); // get mono module for the analysis-net assembly
+                IMetadataScope metadataScope = null;
+                typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, moduleDefinition, metadataScope);
+
+                if (moduleDefinition != currentModule)
+                    typeReference = currentModule.ImportReference(typeReference);
+
+                return typeReference;
+            }
+            else // it is not loaded by analysis-net
+            {
+                if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
+                {
+                    IMetadataScope metadataScope = currentModule.TypeSystem.CoreLibrary;
+                    typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, null, metadataScope);
+                    typeReference = currentModule.ImportReference(typeReference);
+                }
+                else
+                {
+                    // this is a reference to a type in a assembly that we don't know much about it.
+                    // i guess we should create an implementation of the IMetadataScope based on the information given by analysis-net
+
+                    throw new NotImplementedException();
+                }
+            }
 
             return typeReference;
         }
@@ -73,7 +104,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (type is Model.Types.ArrayType arrayType)
             {
-                throw new NotImplementedException();
+                return new Mono.Cecil.ArrayType(this.GenerateTypeReference(arrayType.ElementsType), (int)arrayType.Rank);
             }
 
             if (type is UnknownType unknownType)
@@ -94,7 +125,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
             ModuleDefinition moduleDef = assembliesMap[containingAssembly].MainModule;
             Contract.Assert(moduleDef != null);
-
             return moduleDef;
         }
     }

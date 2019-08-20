@@ -43,7 +43,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 foreach (var methodDefinition in typeDef.Methods)
                 {
-                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator);
+                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t);
                     t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
                 }
 

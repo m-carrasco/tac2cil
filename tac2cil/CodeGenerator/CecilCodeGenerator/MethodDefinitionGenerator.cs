@@ -12,12 +12,16 @@ namespace CodeGenerator.CecilCodeGenerator
     {
         private Model.Types.MethodDefinition methodDefinition;
         private TypeReferenceGenerator typeReferenceGenerator;
+        private TypeDefinition containingType;
 
-        public MethodDefinitionGenerator(Model.Types.MethodDefinition methodDefinition, TypeReferenceGenerator typeReferenceGenerator)
+        public MethodDefinitionGenerator(Model.Types.MethodDefinition methodDefinition, TypeReferenceGenerator typeReferenceGenerator, TypeDefinition containingType)
         {
             this.methodDefinition = methodDefinition;
             this.typeReferenceGenerator = typeReferenceGenerator;
+            this.containingType = containingType;
 
+            Contract.Assert(typeReferenceGenerator != null);
+            Contract.Assert(containingType != null);
             Contract.Assert(methodDefinition != null);
             Contract.Assert(methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
         }
@@ -43,39 +47,49 @@ namespace CodeGenerator.CecilCodeGenerator
             if (methodDefinition.IsVirtual)
                 res |= MethodAttributes.Virtual;
 
+            if (methodDefinition.IsConstructor)
+            {
+                res |= MethodAttributes.HideBySig;
+                res |= MethodAttributes.SpecialName;
+                res |= MethodAttributes.RTSpecialName;
+            }
+
             return res;
         }
 
         public Mono.Cecil.MethodDefinition GenerateMethodDefinition()
         {
             Mono.Cecil.MethodDefinition methodDef = new Mono.Cecil.MethodDefinition(methodDefinition.Name, GenerateMethodAttributes(), typeReferenceGenerator.GenerateTypeReference(methodDefinition.ReturnType));
+            methodDef.DeclaringType = containingType;
 
             methodDef.Body.MaxStackSize = methodDefinition.Body.MaxStack;
-
-            int idx = 0;
             IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
-            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables.Where(v => !v.IsParameter))
+            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
             {
                 if (localVariable.Type is Model.Types.PointerType)
                     throw new NotImplementedException(); // we should specify if it is in/ref?
                 var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
                 methodDef.Body.Variables.Add(varDef);
                 variableDefinitions[localVariable] = varDef;
-                idx++;
             }
 
-            idx = 0;
             IDictionary<IVariable, ParameterDefinition> parameterDefinitions = new Dictionary<IVariable, ParameterDefinition>();
-            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables.Where(v => v.IsParameter))
+            foreach (IVariable localVariable in methodDefinition.Body.Parameters)
             {
                 if (localVariable.Type is Model.Types.PointerType)
                     throw new NotImplementedException(); // we should specify if it is in/ref?
+
+                if (localVariable.Name == "this")
+                {
+                    parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
+                    continue;
+                }
+
                 var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
                 methodDef.Parameters.Add(paramDef);
                 parameterDefinitions[localVariable] = paramDef;
             }
-
-            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions);
+            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator);
             translator.Visit(methodDefinition.Body);
 
             return methodDef;
@@ -87,15 +101,18 @@ namespace CodeGenerator.CecilCodeGenerator
             private ILProcessor processor = null;
             private IDictionary<IVariable, VariableDefinition> variableDefinitions;
             private IDictionary<IVariable, ParameterDefinition> parameterDefinitions;
+            private TypeReferenceGenerator typeReferenceGenerator;
 
             public BytecodeTranslator(Mono.Cecil.MethodDefinition methodDefinition,
                 IDictionary<IVariable, VariableDefinition> variableDefinitions,
-                IDictionary<IVariable, ParameterDefinition> parameterDefinitions)
+                IDictionary<IVariable, ParameterDefinition> parameterDefinitions,
+                TypeReferenceGenerator typeReferenceGenerator)
             {
                 this.methodDefinition = methodDefinition;
                 this.processor = methodDefinition.Body.GetILProcessor();
                 this.variableDefinitions = variableDefinitions;
                 this.parameterDefinitions = parameterDefinitions;
+                this.typeReferenceGenerator = typeReferenceGenerator;
             }
 
             public override void Visit(Model.Bytecode.BasicInstruction instruction)
@@ -145,7 +162,12 @@ namespace CodeGenerator.CecilCodeGenerator
                     IVariable variable = instruction.Operand as IVariable;
 
                     if (variable.IsParameter)
-                        processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, parameterDefinitions[variable]);
+                    {
+                        //if (variable.Name != "this")
+                       //     processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, parameterDefinitions[variable]);
+                        //else
+                            processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, 0);
+                    }
                     else
                         processor.Emit(Mono.Cecil.Cil.OpCodes.Ldloc, variableDefinitions[variable]);
 
@@ -218,7 +240,19 @@ namespace CodeGenerator.CecilCodeGenerator
             public override void Visit(Model.Bytecode.SwitchInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.SizeofInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) { throw new NotImplementedException(); }
-            public override void Visit(Model.Bytecode.MethodCallInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.MethodCallInstruction instruction)
+            {
+                var methodReference = new MethodReference(instruction.Method.Name,
+                    typeReferenceGenerator.GenerateTypeReference(instruction.Method.ReturnType),
+                    typeReferenceGenerator.GenerateTypeReference(instruction.Method.ContainingType));
+
+                //methodReference = typeReferenceGenerator.GenerteMethodReference(methodReference);
+
+                if (instruction.Operation == Model.Bytecode.MethodCallOperation.Static)
+                    processor.Emit(Mono.Cecil.Cil.OpCodes.Call, methodReference);
+                else
+                    throw new NotImplementedException();
+            }
             public override void Visit(Model.Bytecode.IndirectMethodCallInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.CreateObjectInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) { throw new NotImplementedException(); }

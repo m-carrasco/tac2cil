@@ -151,7 +151,7 @@ namespace tac2cil.Assembler
 
                 bytecodeBody.MaxStack = (ushort)_stack.MaxCapacity;
                 bytecodeBody.Instructions.AddRange(instructionConverter.Result);
-                EmptyStackBeforeExit(bytecodeBody, (int)stackSizeAtEntry[cfg.Exit.Id]);
+                //EmptyStackBeforeExit(bytecodeBody, (int)stackSizeAtEntry[cfg.Exit.Id]);
             }
 
             return bytecodeBody;
@@ -350,7 +350,36 @@ namespace tac2cil.Assembler
 
             public override void Visit(MethodCallInstruction instruction)
             {
-                throw new NotImplementedException();
+                Model.Bytecode.MethodCallOperation op = 0;
+                switch (instruction.Operation)
+                {
+                    case MethodCallOperation.Jump:
+                        op = Bytecode.MethodCallOperation.Jump;
+                        break;
+                    case MethodCallOperation.Static:
+                        op = Bytecode.MethodCallOperation.Static;
+                        break;
+                    case MethodCallOperation.Virtual:
+                        op = Bytecode.MethodCallOperation.Virtual;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+
+                var instructions = instruction.Arguments.Select(arg => LoadOperand(arg));
+                var call = new Bytecode.MethodCallInstruction(0, op, instruction.Method);
+
+                if (instructions.Count() > 0)
+                {
+                    instructions.First().Label = instruction.Label;
+                }
+                else
+                {
+                    call.Label = instruction.Label;
+                }
+
+                Result.AddRange(instructions);
+                Result.Add(call);
             }
 
             public override void Visit(IndirectMethodCallInstruction instruction)
