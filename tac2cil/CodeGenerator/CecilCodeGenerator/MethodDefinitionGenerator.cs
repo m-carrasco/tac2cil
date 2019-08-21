@@ -115,6 +115,32 @@ namespace CodeGenerator.CecilCodeGenerator
                 this.typeReferenceGenerator = typeReferenceGenerator;
             }
 
+            private MethodReference GenerateMethodReference(Model.Types.IMethodReference method)
+            {
+                var methodReference = new MethodReference(method.Name,
+                    typeReferenceGenerator.GenerateTypeReference(method.ReturnType),
+                    typeReferenceGenerator.GenerateTypeReference(method.ContainingType));
+
+                foreach (var param in method.Parameters)
+                    methodReference.Parameters.Add(new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(param.Type)));
+
+                if (!method.IsStatic)
+                    methodReference.HasThis = true;
+
+                return methodReference;
+            }
+
+            private FieldReference GenerateFieldReference(Model.Types.IFieldReference analysisNetFieldRef)
+            {
+                FieldReference fieldReference = new FieldReference(
+                    analysisNetFieldRef.Name,
+                    typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.Type),
+                    typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.ContainingType)
+                );
+
+                return fieldReference;
+            }
+
             public override void Visit(Model.Bytecode.BasicInstruction instruction)
             {
                 Nullable<Mono.Cecil.Cil.OpCode> op = null;
@@ -163,9 +189,9 @@ namespace CodeGenerator.CecilCodeGenerator
 
                     if (variable.IsParameter)
                     {
-                        //if (variable.Name != "this")
-                       //     processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, parameterDefinitions[variable]);
-                        //else
+                        if (variable.Name != "this")
+                            processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, parameterDefinitions[variable]);
+                        else
                             processor.Emit(Mono.Cecil.Cil.OpCodes.Ldarg, 0);
                     }
                     else
@@ -224,7 +250,16 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
             }
 
-            public override void Visit(Model.Bytecode.LoadFieldInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.LoadFieldInstruction instruction)
+            {
+                FieldReference fieldReference = GenerateFieldReference(instruction.Field);
+
+                if (instruction.Operation == Model.Bytecode.LoadFieldOperation.Content)
+                    processor.Emit(Mono.Cecil.Cil.OpCodes.Ldfld, fieldReference);
+                else
+                    throw new NotImplementedException();
+            }
+
             public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.StoreInstruction instruction)
             {
@@ -234,7 +269,13 @@ namespace CodeGenerator.CecilCodeGenerator
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Stloc, variableDefinitions[instruction.Target]);
             }
 
-            public override void Visit(Model.Bytecode.StoreFieldInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.StoreFieldInstruction instruction)
+            {
+                FieldReference fieldReference = GenerateFieldReference(instruction.Field);
+
+                processor.Emit(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
+            }
+
             public override void Visit(Model.Bytecode.ConvertInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.BranchInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.SwitchInstruction instruction) { throw new NotImplementedException(); }
@@ -242,20 +283,22 @@ namespace CodeGenerator.CecilCodeGenerator
             public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.MethodCallInstruction instruction)
             {
-                var methodReference = new MethodReference(instruction.Method.Name,
-                    typeReferenceGenerator.GenerateTypeReference(instruction.Method.ReturnType),
-                    typeReferenceGenerator.GenerateTypeReference(instruction.Method.ContainingType));
-
-                foreach (var param in instruction.Method.Parameters)
-                    methodReference.Parameters.Add(new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(param.Type)));
+                var methodReference = GenerateMethodReference(instruction.Method);
 
                 if (instruction.Operation == Model.Bytecode.MethodCallOperation.Static)
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Call, methodReference);
+                else if (instruction.Operation == Model.Bytecode.MethodCallOperation.Virtual)
+                    processor.Emit(Mono.Cecil.Cil.OpCodes.Callvirt, methodReference);
                 else
                     throw new NotImplementedException();
             }
             public override void Visit(Model.Bytecode.IndirectMethodCallInstruction instruction) { throw new NotImplementedException(); }
-            public override void Visit(Model.Bytecode.CreateObjectInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.CreateObjectInstruction instruction)
+            {
+                var methodReference = GenerateMethodReference(instruction.Constructor);
+                processor.Emit(Mono.Cecil.Cil.OpCodes.Newobj, methodReference);
+            }
+
             public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction) { throw new NotImplementedException(); }

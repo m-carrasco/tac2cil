@@ -37,7 +37,7 @@ namespace CodeGenerator.CecilCodeGenerator
             }
             else if (typeDefinition is Model.Types.ClassDefinition typeDef)
             {
-                string namespaceName = typeDef.ContainingNamespace.ContainingNamespace.Name;
+                string namespaceName = typeDef.ContainingNamespace.FullName;
                 var t = new TypeDefinition(namespaceName, typeDef.Name,
                     Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public, typeReferenceGenerator.GenerateTypeReference(typeDef.Base));
 
@@ -45,6 +45,17 @@ namespace CodeGenerator.CecilCodeGenerator
                 {
                     MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t);
                     t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
+                }
+
+                foreach (var field in typeDef.Fields)
+                {
+                    // analysis-net is not currently giving this information
+                    var fieldAttribute = FieldAttributes.Public;
+                    if (field.IsStatic)
+                        fieldAttribute |= FieldAttributes.Static;
+
+                    Mono.Cecil.FieldDefinition fieldDefinition = new Mono.Cecil.FieldDefinition(field.Name, fieldAttribute, typeReferenceGenerator.GenerateTypeReference(field.Type));
+                    t.Fields.Add(fieldDefinition);
                 }
 
                 foreach (var inter in typeDef.Interfaces)

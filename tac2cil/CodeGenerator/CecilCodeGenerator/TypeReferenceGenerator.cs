@@ -46,8 +46,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 if (moduleDefinition != currentModule)
                     typeReference = currentModule.ImportReference(typeReference);
-
-                return typeReference;
             }
             else // it is not loaded by analysis-net
             {

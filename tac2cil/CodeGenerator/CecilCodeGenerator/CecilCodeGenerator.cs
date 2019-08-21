@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Model.Types;
 using Mono.Cecil;
 
@@ -22,12 +23,39 @@ namespace CodeGenerator.CecilCodeGenerator
         private IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap = 
             new Dictionary<Model.Assembly, AssemblyDefinition>();
         
+        private Mono.Cecil.MethodDefinition GetMainDefinitionInCecilModule(ModuleDefinition module)
+        {
+            var mainQuery = from t in module.Types
+                            from m in t.Methods
+                            where m.IsStatic && m.Name.Equals("Main")
+                            select m;
+
+            var main = mainQuery.SingleOrDefault();
+
+            return main;
+        }
+
+        private Model.Types.MethodDefinition GetMainDefinitionInAnalysisNetAssembly(Model.Assembly assembly)
+        {
+            var mainQuery = from t in assembly.RootNamespace.GetAllTypes()
+                            from m in t.Members.OfType<Model.Types.MethodDefinition>()
+                            where m.IsStatic && m.Name.Equals("Main")
+                            select m;
+
+            var main = mainQuery.SingleOrDefault();
+
+            return main;
+        }
+
         public void GenerateAssemblies(string pathToFolder)
         {
             foreach (var analysisNetAssembly in host.Assemblies)
             {
                 string moduleName = analysisNetAssembly.Name;
-                ModuleKind moduleKind = ModuleKind.Dll;
+                // todo: analysis-net does not give information about it
+                // if there is a main method in it, we are updating this to console otherwise we flag it as a dll
+                // not sure we can workaround it for windows forms
+                ModuleKind moduleKind = GetMainDefinitionInAnalysisNetAssembly(analysisNetAssembly) != null ? ModuleKind.Console : ModuleKind.Dll;
 
                 AssemblyDefinition cecilAssembly = AssemblyDefinition.CreateAssembly(
                     new AssemblyNameDefinition(analysisNetAssembly.Name, new Version(1, 0, 0, 0)), moduleName, moduleKind);
@@ -49,6 +77,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     TypeDefinitionGenerator typeDefGen = new TypeDefinitionGenerator(analysisNetType, module, typeReferenceGenerator);
                     module.Types.Add(typeDefGen.Generate());
                 }
+
+                module.EntryPoint = GetMainDefinitionInCecilModule(module);
             }
 
             foreach (var assembly in assembliesMap.Values)
