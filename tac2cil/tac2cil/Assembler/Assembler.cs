@@ -101,7 +101,7 @@ namespace tac2cil.Assembler
             MethodBody bytecodeBody = new MethodBody(MethodBodyKind.Bytecode);
 
             bytecodeBody.Parameters.AddRange(_tacBody.Parameters);
-            bytecodeBody.LocalVariables.UnionWith(_tacBody.LocalVariables);
+            bytecodeBody.LocalVariables.AddRange(_tacBody.LocalVariables);
             //bytecodeBody.ExceptionInformation.AddRange(_tacBody.ExceptionInformation);
             bytecodeBody.MaxStack = 0;
 
@@ -288,10 +288,10 @@ namespace tac2cil.Assembler
                 throw new NotImplementedException();
             }
 
-            public override void Visit(FilterInstruction instruction)
-            {
-                throw new NotImplementedException();
-            }
+            //public override void Visit(FilterInstruction instruction)
+            //{
+            //    throw new NotImplementedException();
+            //}
 
             public override void Visit(CatchInstruction instruction)
             {

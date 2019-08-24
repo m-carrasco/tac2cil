@@ -34,7 +34,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 return currentModule.TypeSystem.String;
 
             
-            ITypeDefinition def = host.ResolveReference(basicType);
+            Model.Types.TypeDefinition def = host.ResolveReference(basicType);
 
             TypeReference typeReference = null;
             // is a reference to a type in an assembly loaded by analysis-net?
@@ -97,7 +97,8 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (type is Model.Types.PointerType pointerType)
             {
-                throw new NotImplementedException();
+                // Mono.Cecil.PointerType is an unsafe reference
+                return new Mono.Cecil.ByReferenceType(GenerateTypeReference(pointerType.TargetType));
             }
 
             if (type is Model.Types.ArrayType arrayType)
@@ -113,7 +114,7 @@ namespace CodeGenerator.CecilCodeGenerator
             throw new NotImplementedException();
         }
 
-        private ModuleDefinition ModuleDefinitionForTypeDefinition(ITypeDefinition typeDefinition)
+        private ModuleDefinition ModuleDefinitionForTypeDefinition(Model.Types.TypeDefinition typeDefinition)
         {
             // the type definition must be in some of the loaded assemblies
             // we are going to look for its containing module

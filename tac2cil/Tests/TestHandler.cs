@@ -12,13 +12,18 @@ namespace Tests
 {
     class TestHandler
     {
-        public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac)
+        public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, bool cciProvider)
         {
             Compiler compiler = new Compiler();
             var output = compiler.CompileSource(source);
 
             Host host = new Host();
-            ILoader provider = new CCIProvider.Loader(host);
+            ILoader provider = null;
+            if (cciProvider)
+                provider = new CCIProvider.Loader(host);
+            else
+                provider = new MetadataProvider.Loader(host);
+
             provider.LoadAssembly(output);
 
             if (convertToTac)

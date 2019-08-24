@@ -8,46 +8,45 @@ namespace CodeGenerator.CecilCodeGenerator
 {
     class TypeDefinitionGenerator
     {
-        private ITypeDefinition def;
+        private Model.Types.TypeDefinition def;
         private ModuleDefinition module;
         private TypeReferenceGenerator typeReferenceGenerator;
 
-        public TypeDefinitionGenerator(Model.Types.ITypeDefinition def, ModuleDefinition module, TypeReferenceGenerator typeReferenceGenerator)
+        public TypeDefinitionGenerator(Model.Types.TypeDefinition def, ModuleDefinition module, TypeReferenceGenerator typeReferenceGenerator)
         {
             this.def = def;
             this.module = module;
             this.typeReferenceGenerator = typeReferenceGenerator;
         }
 
-        public TypeDefinition Generate()
+        public Mono.Cecil.TypeDefinition Generate()
         {
-            ITypeDefinition typeDefinition = def;
+            Model.Types.TypeDefinition typeDefinition = def;
+            if (typeDefinition.Kind == TypeDefinitionKind.Struct)
+            {
+                throw new NotImplementedException();
+            }
+            else if (typeDefinition.Kind == TypeDefinitionKind.Enum)
+            {
+                throw new NotImplementedException();
+            }
+            else if (typeDefinition.Kind == TypeDefinitionKind.Interface)
+            {
+                throw new NotImplementedException();
+            }
+            else if (typeDefinition.Kind == TypeDefinitionKind.Class)
+            {
+                string namespaceName = typeDefinition.ContainingNamespace.FullName;
+                var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.Name,
+                    Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public,  typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
 
-            if (typeDefinition is Model.Types.StructDefinition structDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.EnumDefinition enumDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.InterfaceDefinition interfaceDef)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition is Model.Types.ClassDefinition typeDef)
-            {
-                string namespaceName = typeDef.ContainingNamespace.FullName;
-                var t = new TypeDefinition(namespaceName, typeDef.Name,
-                    Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public, typeReferenceGenerator.GenerateTypeReference(typeDef.Base));
-
-                foreach (var methodDefinition in typeDef.Methods)
+                foreach (var methodDefinition in typeDefinition.Methods)
                 {
                     MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t);
                     t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
                 }
 
-                foreach (var field in typeDef.Fields)
+                foreach (var field in typeDefinition.Fields)
                 {
                     // analysis-net is not currently giving this information
                     var fieldAttribute = FieldAttributes.Public;
@@ -58,7 +57,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     t.Fields.Add(fieldDefinition);
                 }
 
-                foreach (var inter in typeDef.Interfaces)
+                foreach (var inter in typeDefinition.Interfaces)
                     t.Interfaces.Add(new InterfaceImplementation(typeReferenceGenerator.GenerateTypeReference(inter)));
 
                 return t;
