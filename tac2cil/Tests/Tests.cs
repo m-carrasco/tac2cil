@@ -38,6 +38,9 @@ namespace Tests
             "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 12
             "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 13
             "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 14
+
+            "Tests.Resources.Loop.cs/Test.Program/Test", // 15
+            "Tests.Resources.Loop.cs/Test.Program/Test", // 16
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -54,9 +57,11 @@ namespace Tests
             null, // 9
             null, // 10
             null, // 11
-            49,
-            199, 
-            -2
+            49, // 12
+            199, // 13
+            -2, // 14
+            0, // 15
+            8 // 16
         };
 
         private static readonly object[] TestReturnValueExpectedResult =
@@ -75,7 +80,9 @@ namespace Tests
             100, // 11
             50, // 12
             200, // 13
-            -1 // 14
+            -1, // 14
+            0, // 15
+            21, // 16
         };
 
         [Test, Sequential]

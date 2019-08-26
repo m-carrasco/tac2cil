@@ -86,6 +86,7 @@
     <EmbeddedResource Include="Resources\RefParameter2.cs" />
     <EmbeddedResource Include="Resources\InOutParameters.cs" />
     <EmbeddedResource Include="Resources\IfConditionals.cs" />
+    <EmbeddedResource Include="Resources\Loop.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />
