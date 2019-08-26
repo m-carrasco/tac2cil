@@ -575,7 +575,14 @@ namespace CodeGenerator.CecilCodeGenerator
                 SetOffset(processor, instruction.Offset);
             }
 
-            public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) {
+                if (instruction.WithLowerBound)
+                    throw new NotImplementedException();
+
+                var cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, typeReferenceGenerator.GenerateTypeReference(instruction.Type));
+                this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            }
+
             public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction) { throw new NotImplementedException(); }
 
