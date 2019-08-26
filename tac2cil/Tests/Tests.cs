@@ -1,14 +1,4 @@
-﻿using Backend.Analyses;
-using Backend.Transformations;
-using Model;
-using Model.Types;
-using NUnit.Framework;
-using System.IO;
-using System.Linq;
-using tac2cil.Assembler;
-using System.Reflection;
-using MethodBody = Model.Types.MethodBody;
-using System;
+﻿using NUnit.Framework;
 
 namespace Tests
 {
@@ -42,9 +32,15 @@ namespace Tests
             "Tests.Resources.RefParameter2.cs/Test.Program/TestBool", // 7
             "Tests.Resources.RefParameter2.cs/Test.Program/TestFloat", // 8
             "Tests.Resources.RefParameter2.cs/Test.Program/TestObject", // 9
+            "Tests.Resources.InOutParameters.cs/Test.Program/TestIn", // 10
+            "Tests.Resources.InOutParameters.cs/Test.Program/TestOut", // 11
+
+            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 12
+            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 13
+            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 14
         };
 
-        private static readonly string[] TestReturnValueParameters =
+        private static readonly object[] TestReturnValueParameters =
         {
             null, // 0
             null, // 1
@@ -55,7 +51,12 @@ namespace Tests
             null, // 6
             null, // 7
             null, // 8
-            null  // 9
+            null, // 9
+            null, // 10
+            null, // 11
+            49,
+            199, 
+            -2
         };
 
         private static readonly object[] TestReturnValueExpectedResult =
@@ -69,7 +70,12 @@ namespace Tests
             1, // 6
             true, // 7
             5.0f, // 8
-            null // 9
+            null, // 9
+            1, // 10
+            100, // 11
+            50, // 12
+            200, // 13
+            -1 // 14
         };
 
         [Test, Sequential]
@@ -87,7 +93,8 @@ namespace Tests
 
             var source = GetTestSourceCode(sourceCodeResource);
             TestHandler testHandler = new TestHandler();
-            object[] param = null;
+            object[] param = parameters == null ? null : new object[1] { parameters };
+
             var r = testHandler.Test(source, type, method, param, false, true);
             Assert.AreEqual(r, expectedResult);
         }
@@ -107,7 +114,7 @@ namespace Tests
 
             var source = GetTestSourceCode(sourceCodeResource);
             TestHandler testHandler = new TestHandler();
-            object[] param = null;
+            object[] param = parameters == null ? null : new object[1] { parameters };
             var r = testHandler.Test(source, type, method, param, false, false);
             Assert.AreEqual(r, expectedResult);
         }

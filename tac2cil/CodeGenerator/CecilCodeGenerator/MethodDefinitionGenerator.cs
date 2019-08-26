@@ -143,6 +143,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 return fieldReference;
             }
 
+            private void SetOffset(ILProcessor processor, uint offset)
+            {
+                processor.Body.Instructions.Last().Offset = (int)offset;
+            }
+
             public override void Visit(Model.Bytecode.BasicInstruction instruction)
             {
                 Nullable<Mono.Cecil.Cil.OpCode> op = null;
@@ -180,6 +185,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
 
                 processor.Emit(op.Value);
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadIndirectInstruction instruction)
@@ -234,6 +240,8 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
                 else
                     throw new NotImplementedException();
+
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.StoreIndirectInstruction instruction)
@@ -276,6 +284,8 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
                 else
                     throw new NotImplementedException();
+
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadInstruction instruction)
@@ -333,7 +343,6 @@ namespace CodeGenerator.CecilCodeGenerator
                         }
                         else
                             throw new NotImplementedException();
-
                     }
                     else if (instruction.Operand is IVariable variable)
                     {
@@ -365,6 +374,8 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
                 else
                     throw new NotImplementedException();
+
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadFieldInstruction instruction)
@@ -375,6 +386,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Ldfld, fieldReference);
                 else
                     throw new NotImplementedException();
+
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) { throw new NotImplementedException(); }
@@ -384,6 +397,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Starg, parameterDefinitions[instruction.Target]);
                 else
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Stloc, variableDefinitions[instruction.Target]);
+
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.StoreFieldInstruction instruction)
@@ -391,6 +406,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 FieldReference fieldReference = GenerateFieldReference(instruction.Field);
 
                 processor.Emit(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.ConvertInstruction instruction) { throw new NotImplementedException(); }
@@ -408,12 +424,15 @@ namespace CodeGenerator.CecilCodeGenerator
                     processor.Emit(Mono.Cecil.Cil.OpCodes.Callvirt, methodReference);
                 else
                     throw new NotImplementedException();
+
+                SetOffset(processor, instruction.Offset);
             }
             public override void Visit(Model.Bytecode.IndirectMethodCallInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.CreateObjectInstruction instruction)
             {
                 var methodReference = GenerateMethodReference(instruction.Constructor);
                 processor.Emit(Mono.Cecil.Cil.OpCodes.Newobj, methodReference);
+                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) { throw new NotImplementedException(); }
