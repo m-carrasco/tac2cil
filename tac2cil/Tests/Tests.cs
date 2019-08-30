@@ -42,7 +42,10 @@ namespace Tests
             "Tests.Resources.Loop.cs/Test.Program/Test", // 15
             "Tests.Resources.Loop.cs/Test.Program/Test", // 16
 
-            "Tests.Resources.Arrays.cs/Test.Program/Test", // 17
+            "Tests.Resources.Arrays.cs/Test.Program/Test1", // 17
+            "Tests.Resources.Arrays.cs/Test.Program/Test2", // 18
+            "Tests.Resources.Arrays.cs/Test.Program/Test3", // 19
+            "Tests.Resources.Arrays.cs/Test.Program/Test4", // 20
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -64,7 +67,10 @@ namespace Tests
             -2, // 14
             0, // 15
             8, // 16
-            null // 17
+            null, // 17
+            null, // 18
+            null, // 19
+            null // 20
         };
 
         private static readonly object[] TestReturnValueExpectedResult =
@@ -86,7 +92,10 @@ namespace Tests
             -1, // 14
             0, // 15
             21, // 16
-            1045 // 17
+            1045, // 17
+            1045, // 18
+            20, // 19
+            20, // 20
         };
 
         [Test, Sequential]

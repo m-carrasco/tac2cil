@@ -2,6 +2,7 @@
 using Model.ThreeAddressCode.Values;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -14,16 +15,19 @@ namespace CodeGenerator.CecilCodeGenerator
         private Model.Types.MethodDefinition methodDefinition;
         private TypeReferenceGenerator typeReferenceGenerator;
         private TypeDefinition containingType;
+        private ModuleDefinition currentModule;
 
-        public MethodDefinitionGenerator(Model.Types.MethodDefinition methodDefinition, TypeReferenceGenerator typeReferenceGenerator, TypeDefinition containingType)
+        public MethodDefinitionGenerator(Model.Types.MethodDefinition methodDefinition, TypeReferenceGenerator typeReferenceGenerator, TypeDefinition containingType, ModuleDefinition module)
         {
             this.methodDefinition = methodDefinition;
             this.typeReferenceGenerator = typeReferenceGenerator;
             this.containingType = containingType;
+            this.currentModule = module;
 
             Contract.Assert(typeReferenceGenerator != null);
             Contract.Assert(containingType != null);
             Contract.Assert(methodDefinition != null);
+            Contract.Assert(currentModule != null);
             Contract.Assert(methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
         }
 
@@ -67,8 +71,8 @@ namespace CodeGenerator.CecilCodeGenerator
             IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
             foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
             {
-                if (localVariable.Type is Model.Types.PointerType)
-                    throw new NotImplementedException(); // we should specify if it is in/ref?
+                //if (localVariable.Type is Model.Types.PointerType)
+                //    throw new NotImplementedException(); // we should specify if it is in/ref?
 
                 var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
                 methodDef.Body.Variables.Add(varDef);
@@ -93,7 +97,7 @@ namespace CodeGenerator.CecilCodeGenerator
             }
 
             ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
-            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor);
+            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor, currentModule);
 
             IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated 
                 = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
@@ -113,6 +117,7 @@ namespace CodeGenerator.CecilCodeGenerator
             foreach (Model.Bytecode.Instruction ins in methodDefinition.Body.Instructions)
             {
                 ins.Accept(translator);
+                Contract.Assert(translator.Result != null);
                 translated[ins] = translator.Result;
             }
         }
@@ -170,20 +175,22 @@ namespace CodeGenerator.CecilCodeGenerator
             private IDictionary<IVariable, VariableDefinition> variableDefinitions;
             private IDictionary<IVariable, ParameterDefinition> parameterDefinitions;
             private TypeReferenceGenerator typeReferenceGenerator;
-
+            private ModuleDefinition currentModule;
             public IList<Mono.Cecil.Cil.Instruction> Result;
 
             public BytecodeTranslator(Mono.Cecil.MethodDefinition methodDefinition,
                 IDictionary<IVariable, VariableDefinition> variableDefinitions,
                 IDictionary<IVariable, ParameterDefinition> parameterDefinitions,
                 TypeReferenceGenerator typeReferenceGenerator,
-                ILProcessor processor)
+                ILProcessor processor,
+                ModuleDefinition currentModule)
             {
                 this.methodDefinition = methodDefinition;
                 this.processor = processor;
                 this.variableDefinitions = variableDefinitions;
                 this.parameterDefinitions = parameterDefinitions;
                 this.typeReferenceGenerator = typeReferenceGenerator;
+                this.currentModule = currentModule;
             }
 
             private MethodReference GenerateMethodReference(Model.Types.IMethodReference method)
@@ -210,11 +217,6 @@ namespace CodeGenerator.CecilCodeGenerator
                 );
 
                 return fieldReference;
-            }
-
-            private void SetOffset(ILProcessor processor, uint offset)
-            {
-                //processor.Body.Instructions.Last().Offset = (int)offset;
             }
 
             public override void Visit(Model.Bytecode.BasicInstruction instruction)
@@ -249,12 +251,20 @@ namespace CodeGenerator.CecilCodeGenerator
                     case Model.Bytecode.BasicOperation.Return:
                         op = Mono.Cecil.Cil.OpCodes.Ret;
                         break;
+                    case Model.Bytecode.BasicOperation.Div:
+                        op = instruction.UnsignedOperands ? Mono.Cecil.Cil.OpCodes.Div_Un : Mono.Cecil.Cil.OpCodes.Div;
+                        break;
+                    case Model.Bytecode.BasicOperation.Rem:
+                        op = instruction.UnsignedOperands ? Mono.Cecil.Cil.OpCodes.Rem_Un : Mono.Cecil.Cil.OpCodes.Rem;
+                        break;
+                    case Model.Bytecode.BasicOperation.Dup:
+                        op = Mono.Cecil.Cil.OpCodes.Dup;
+                        break;
                     default:
                         throw new NotImplementedException();
                 }
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op.Value) };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadIndirectInstruction instruction)
@@ -315,8 +325,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
                 else
                     this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, typeReferenceGenerator.GenerateTypeReference(instruction.Type)) };
-
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.StoreIndirectInstruction instruction)
@@ -366,8 +374,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
                 else
                     this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, typeReferenceGenerator.GenerateTypeReference(instruction.Type)) };
-
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadInstruction instruction)
@@ -459,7 +465,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadFieldInstruction instruction)
@@ -472,7 +477,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) { throw new NotImplementedException(); }
@@ -485,7 +489,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stloc, variableDefinitions[instruction.Target]);
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.StoreFieldInstruction instruction)
@@ -495,7 +498,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.ConvertInstruction instruction) { throw new NotImplementedException(); }
@@ -564,7 +566,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
             public override void Visit(Model.Bytecode.IndirectMethodCallInstruction instruction) { throw new NotImplementedException(); }
             public override void Visit(Model.Bytecode.CreateObjectInstruction instruction)
@@ -572,19 +573,145 @@ namespace CodeGenerator.CecilCodeGenerator
                 var methodReference = GenerateMethodReference(instruction.Constructor);
                 var cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, methodReference);
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
-                SetOffset(processor, instruction.Offset);
             }
 
             public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) {
+
                 if (instruction.WithLowerBound)
                     throw new NotImplementedException();
 
-                var cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, typeReferenceGenerator.GenerateTypeReference(instruction.Type));
+                var cilArrayType = typeReferenceGenerator.GenerateTypeReference(instruction.Type);
+
+                Mono.Cecil.Cil.Instruction cilIns = null;
+                if (!instruction.Type.IsVector)
+                {
+                    var arrayCtor = ArrayHelper.ArrayCtor(cilArrayType as ArrayType);
+                    cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, arrayCtor);
+                } else
+                    cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType);
+
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
             }
 
-            public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction) { throw new NotImplementedException(); }
-            public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction) { throw new NotImplementedException(); }
+            public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction)
+            {
+                if (instruction.WithLowerBound)
+                    throw new NotImplementedException();
+
+                Mono.Cecil.Cil.Instruction res = null;
+
+                if (instruction.Operation == LoadArrayElementOperation.Address)
+                {
+                    if (!instruction.Array.IsVector)
+                    {
+                        var arrayAddress = ArrayHelper.ArrayAddress(typeReferenceGenerator.GenerateTypeReference(instruction.Array) as ArrayType);
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayAddress);
+                    } else
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelema, typeReferenceGenerator.GenerateTypeReference(instruction.Array.ElementsType));
+                }
+                else if (instruction.Operation == LoadArrayElementOperation.Content)
+                {
+                    if (!instruction.Array.IsVector)
+                    {
+                        var arrayGet = ArrayHelper.ArrayGet(typeReferenceGenerator.GenerateTypeReference(instruction.Array) as ArrayType);
+
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayGet);
+
+                    } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.IntPtr)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int8)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I1);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int16)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I2);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int32)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I4);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int64)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I8);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float32)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R4);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R8);
+                    }
+                    else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R8);
+                    }
+                    else if (instruction.Array.ElementsType.TypeKind == Model.Types.TypeKind.ReferenceType)
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_Ref);
+                    }
+                    else
+                    {
+                        res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_Any, typeReferenceGenerator.GenerateTypeReference(instruction.Array.ElementsType));
+                    }
+                }
+                else
+                    throw new NotImplementedException();
+
+                this.Result = new List<Mono.Cecil.Cil.Instruction>() { res };
+            }
+
+            public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction)
+            {
+                if (instruction.WithLowerBound)
+                    throw new NotImplementedException();
+
+                Mono.Cecil.Cil.Instruction res = null;
+
+                if (!instruction.Array.IsVector)
+                {
+                    var arrayGet = ArrayHelper.ArraySet(typeReferenceGenerator.GenerateTypeReference(instruction.Array) as ArrayType);
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayGet);
+                } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.IntPtr)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_I);
+                } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int8)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_I1);
+                } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int16)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_I2);
+                }
+                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int32)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_I4);
+                } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int64)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_I8);
+                }
+                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float32)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_R4);
+                } else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_R8);
+                }
+                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_R8);
+                } else if (instruction.Array.ElementsType.TypeKind == Model.Types.TypeKind.ReferenceType)
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_Ref);
+                } else
+                {
+                    res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_Any, typeReferenceGenerator.GenerateTypeReference(instruction.Array.ElementsType));
+                }
+
+                this.Result = new List<Mono.Cecil.Cil.Instruction>() { res };
+            }
 
         }
     }

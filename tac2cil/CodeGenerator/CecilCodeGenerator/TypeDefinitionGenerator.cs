@@ -39,10 +39,10 @@ namespace CodeGenerator.CecilCodeGenerator
                 string namespaceName = typeDefinition.ContainingNamespace.FullName;
                 var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.Name,
                     Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public,  typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
-
+                
                 foreach (var methodDefinition in typeDefinition.Methods)
                 {
-                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t);
+                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t, module);
                     t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
                 }
 

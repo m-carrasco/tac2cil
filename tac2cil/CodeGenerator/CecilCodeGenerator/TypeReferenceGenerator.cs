@@ -1,6 +1,7 @@
 ﻿using Model;
 using Model.Types;
 using Mono.Cecil;
+using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
@@ -103,7 +104,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (type is Model.Types.ArrayType arrayType)
             {
-                return new Mono.Cecil.ArrayType(this.GenerateTypeReference(arrayType.ElementsType), (int)arrayType.Rank);
+                return TypeReferenceRocks.MakeArrayType(this.GenerateTypeReference(arrayType.ElementsType), (int)arrayType.Rank);
             }
 
             if (type is UnknownType unknownType)
