@@ -595,9 +595,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
             public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction)
             {
-                if (instruction.WithLowerBound)
-                    throw new NotImplementedException();
-
                 Mono.Cecil.Cil.Instruction res = null;
 
                 if (instruction.Operation == LoadArrayElementOperation.Address)
@@ -666,9 +663,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
             public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction)
             {
-                if (instruction.WithLowerBound)
-                    throw new NotImplementedException();
-
                 Mono.Cecil.Cil.Instruction res = null;
 
                 if (!instruction.Array.IsVector)
