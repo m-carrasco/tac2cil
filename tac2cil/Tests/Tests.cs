@@ -78,38 +78,7 @@ namespace Tests
             null // 22
         };
 
-        private static readonly object[] TestReturnValueExpectedResult =
-        {
-            5, // 0
-            20, // 1
-            10, // 2
-            true, // 3
-            10.0f, // 4
-            null, // 5
-            1, // 6
-            true, // 7
-            5.0f, // 8
-            null, // 9
-            1, // 10
-            100, // 11
-            50, // 12
-            200, // 13
-            -1, // 14
-            0, // 15
-            21, // 16
-            1045, // 17
-            1045, // 18
-            20, // 19
-            20, // 20
-            1, // 21
-            5 // 22
-        };
-
-        [Test, Sequential]
-        public void TestReturnValueCCINoTac(
-            [ValueSource("TestReturnValueSeeds")] string testSeed,
-            [ValueSource("TestReturnValueParameters")] object parameters,
-            [ValueSource("TestReturnValueExpectedResult")] object expectedResult)
+        private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
         {
             char[] s = { '/' };
             var resourceToTest = testSeed.Split(s);
@@ -122,28 +91,26 @@ namespace Tests
             TestHandler testHandler = new TestHandler();
             object[] param = parameters == null ? null : new object[1] { parameters };
 
-            var r = testHandler.Test(source, type, method, param, false, true);
-            Assert.AreEqual(r, expectedResult);
+            var r = testHandler.Test(source, type, method, param, tac, cciProvider);
+            var expectedResult = testHandler.RunOriginalCode(source, type, method, param);
+
+            Assert.AreEqual(expectedResult, r);
+        }
+
+        [Test, Sequential]
+        public void TestReturnValueCCINoTac(
+            [ValueSource("TestReturnValueSeeds")] string testSeed,
+            [ValueSource("TestReturnValueParameters")] object parameters)
+        {
+            TestReturnValue(testSeed, parameters, true, false);
         }
 
         [Test, Sequential]
         public void TestReturnValueMetadataProviderNoTac(
         [ValueSource("TestReturnValueSeeds")] string testSeed,
-        [ValueSource("TestReturnValueParameters")] object parameters,
-        [ValueSource("TestReturnValueExpectedResult")] object expectedResult)
+        [ValueSource("TestReturnValueParameters")] object parameters)
         {
-            char[] s = { '/' };
-            var resourceToTest = testSeed.Split(s);
-
-            string sourceCodeResource = resourceToTest[0];
-            string type = resourceToTest[1];
-            string method = resourceToTest[2];
-
-            var source = GetTestSourceCode(sourceCodeResource);
-            TestHandler testHandler = new TestHandler();
-            object[] param = parameters == null ? null : new object[1] { parameters };
-            var r = testHandler.Test(source, type, method, param, false, false);
-            Assert.AreEqual(r, expectedResult);
+            TestReturnValue(testSeed, parameters, false, false);
         }
     }
 }

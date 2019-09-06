@@ -12,6 +12,23 @@ namespace Tests
 {
     class TestHandler
     {
+        public Object RunOriginalCode(string source, string typeName, string method, object[] parameters)
+        {
+            Compiler compiler = new Compiler();
+            var output = compiler.CompileSource(source);
+            var DLL = System.Reflection.Assembly.LoadFile(output);
+            Type type = DLL.GetType(typeName);
+            var methodInfoStatic = type.GetMethod(method);
+            if (methodInfoStatic == null)
+            {
+                throw new Exception("No such static method exists.");
+            }
+
+            // Invoke static method
+            Object result = methodInfoStatic.Invoke(null, parameters);
+            return result;
+        }
+
         public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, bool cciProvider)
         {
             Compiler compiler = new Compiler();
