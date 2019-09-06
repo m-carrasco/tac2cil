@@ -1,7 +1,9 @@
-﻿using Model.Types;
+﻿using Model;
+using Model.Types;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace CodeGenerator.CecilCodeGenerator
@@ -39,7 +41,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 string namespaceName = typeDefinition.ContainingNamespace.FullName;
                 var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.Name,
                     Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public,  typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
-                
+
+                var genericParameters = typeDefinition.GenericParameters.Select(p => new Mono.Cecil.GenericParameter(t));
+                foreach (var gp in genericParameters)
+                    t.GenericParameters.Add(gp);
+
                 foreach (var methodDefinition in typeDefinition.Methods)
                 {
                     MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t, module);
@@ -53,7 +59,11 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (field.IsStatic)
                         fieldAttribute |= FieldAttributes.Static;
 
-                    Mono.Cecil.FieldDefinition fieldDefinition = new Mono.Cecil.FieldDefinition(field.Name, fieldAttribute, typeReferenceGenerator.GenerateTypeReference(field.Type));
+                    TypeReference fieldType = field.Type is IGenericParameterReference genericReference ?
+                        t.GenericParameters.ElementAt(genericReference.Index)
+                        : typeReferenceGenerator.GenerateTypeReference(field.Type);
+
+                    Mono.Cecil.FieldDefinition fieldDefinition = new Mono.Cecil.FieldDefinition(field.Name, fieldAttribute,fieldType);
                     t.Fields.Add(fieldDefinition);
                 }
 

@@ -195,24 +195,65 @@ namespace CodeGenerator.CecilCodeGenerator
 
             private MethodReference GenerateMethodReference(Model.Types.IMethodReference method)
             {
+                TypeReference returnType;
+                if (method.GenericMethod != null && 
+                    method.GenericMethod.ReturnType is Model.Types.IGenericParameterReference)
+                    returnType = typeReferenceGenerator.GenerateTypeReference(method.GenericMethod.ReturnType);
+                else
+                    returnType = typeReferenceGenerator.GenerateTypeReference(method.ReturnType);
+
+                var containingType = typeReferenceGenerator.GenerateTypeReference(method.ContainingType);
+
                 var methodReference = new MethodReference(method.Name,
-                    typeReferenceGenerator.GenerateTypeReference(method.ReturnType),
-                    typeReferenceGenerator.GenerateTypeReference(method.ContainingType));
+                    returnType,
+                    containingType);
+
+                //if (method.ContainingType.GenericParameterCount > 0)
+                //    methodReference.CallingConvention |= MethodCallingConvention.Generic;
 
                 foreach (var param in method.Parameters)
-                    methodReference.Parameters.Add(new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(param.Type)));
+                {
+                    TypeReference paramType;
+                    if (method.GenericMethod != null && 
+                        method.GenericMethod.Parameters.ElementAt(param.Index).Type is Model.Types.IGenericParameterReference)
+                        paramType = typeReferenceGenerator.GenerateTypeReference(method.GenericMethod.Parameters.ElementAt(param.Index).Type);
+                    else
+                        paramType = typeReferenceGenerator.GenerateTypeReference(param.Type);
+
+                    methodReference.Parameters.Add(new ParameterDefinition(paramType));
+                }
 
                 if (!method.IsStatic)
                     methodReference.HasThis = true;
+
+                methodReference = currentModule.ImportReference(methodReference);
 
                 return methodReference;
             }
 
             private FieldReference GenerateFieldReference(Model.Types.IFieldReference analysisNetFieldRef)
             {
+                TypeReference cecilType = null;
+
+                var genericType = analysisNetFieldRef.ContainingType.GenericType;
+                if (genericType != null && genericType.ResolvedType != null)
+                {
+                    // this is not the best solution because we may not be able to resolve the type
+                    // probably analysis-net should give us more information
+                    // if the type is an instantiated parameter type we must provide a reference to it
+                    // not to the instantiated type
+
+                    var resolvedGeneric = genericType.ResolvedType;
+                    var fieldInGeneric = resolvedGeneric.Fields.Where(f => f.Name.Equals(analysisNetFieldRef.Name)).First();
+
+                    if (fieldInGeneric.Type is Model.Types.IGenericParameterReference)
+                        cecilType = typeReferenceGenerator.GenerateTypeReference(fieldInGeneric.Type);
+                } else
+                    cecilType = typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.Type);
+
                 FieldReference fieldReference = new FieldReference(
                     analysisNetFieldRef.Name,
-                    typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.Type),
+                    cecilType,
                     typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.ContainingType)
                 );
 
@@ -575,11 +616,8 @@ namespace CodeGenerator.CecilCodeGenerator
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
             }
 
-            public override void Visit(Model.Bytecode.CreateArrayInstruction instruction) {
-
-                if (instruction.WithLowerBound)
-                    throw new NotImplementedException();
-
+            public override void Visit(Model.Bytecode.CreateArrayInstruction instruction)
+            {
                 var cilArrayType = typeReferenceGenerator.GenerateTypeReference(instruction.Type);
 
                 Mono.Cecil.Cil.Instruction cilIns = null;

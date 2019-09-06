@@ -17,6 +17,7 @@ namespace Test
             return a.Get();
         }
     }
+
     public class A<T>
     {
         public T i;
@@ -34,6 +35,29 @@ namespace Test
         public T Get()
         {
             return i;
+        }
+    }
+
+    public class C<W, X, Y>
+    {
+        public void M()
+        {
+        }
+    }
+
+    public class D<T>
+    {
+        public void M()
+        {
+            var c = new C<int, T, bool>();
+        }
+    }
+
+    public class E<T0, T1, T2>
+    {
+        public void M()
+        {
+            var c = new C<T0, T1, T2>();
         }
     }
 }
