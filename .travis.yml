@@ -9,4 +9,4 @@ install:
   - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
 script:
   - msbuild tac2cil/tac2cil.sln
-# - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./NUnitTests/bin/Debug/NUnitTests.dll
+  - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./tac2cil/Tests/bin/Debug/Tests.dll
