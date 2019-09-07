@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Tests
 {
@@ -110,7 +111,24 @@ namespace Tests
         [ValueSource("TestReturnValueSeeds")] string testSeed,
         [ValueSource("TestReturnValueParameters")] object parameters)
         {
+            if (IgnoreInMetadataProvider(testSeed))
+                return;
+
             TestReturnValue(testSeed, parameters, false, false);
+        }
+
+        private bool IgnoreInMetadataProvider(string testSeed)
+        {
+            HashSet<string> ignore = new HashSet<string>()
+            {
+                TestReturnValueSeeds[21],
+                TestReturnValueSeeds[22]
+            };
+
+            if (ignore.Contains(testSeed))
+                return true;
+
+            return false;
         }
     }
 }
