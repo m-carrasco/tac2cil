@@ -1,0 +1,12 @@
+language: csharp
+dist: xenial
+sudo: true
+mono: latest
+install:
+  - (cd cecil && travis_retry nuget restore)
+  - (cd analysis-net && travis_retry nuget restore)
+  - (cd tac2cil && travis_retry nuget restore)
+  - nuget install NUnit.Console -Version 3.10.0 -OutputDirectory testrunner
+script:
+  - msbuild tac2cil/tac2cil.sln
+# - mono ./testrunner/NUnit.ConsoleRunner.3.10.0/tools/nunit3-console.exe ./NUnitTests/bin/Debug/NUnitTests.dll
