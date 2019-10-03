@@ -110,7 +110,10 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (genericParameterReference.Kind == GenericParameterKind.Type)
                 {
                     var cecilContainingType = this.GenerateTypeReference(genericParameterReference.GenericContainer as IBasicType);
+                    if (cecilContainingType is GenericInstanceType genericInstanceType)
+                        return genericInstanceType.ElementType.GenericParameters.ElementAt(genericParameterReference.Index);
                     return cecilContainingType.GenericParameters.ElementAt(genericParameterReference.Index);
+
                 } else if (genericParameterReference.Kind == GenericParameterKind.Method)
                 {
                     Model.Types.MethodReference methodRef = genericParameterReference.GenericContainer as Model.Types.MethodReference;
