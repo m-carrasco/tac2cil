@@ -115,33 +115,40 @@ namespace CodeGenerator.CecilCodeGenerator
             return typeReference;
         }
 
+        public TypeReference GenerateTypeReference(Model.Types.IGenericParameterReference genericParameterReference)
+        {
+            if (genericParameterReference.Kind == GenericParameterKind.Type)
+            {
+                // I generate a cecil reference to the generic container and from there I take the reference to the cecil generic parameter
+                // I could not create directly the cecil generic parameter reference
+
+                var cecilContainingType = this.GenerateTypeReference(genericParameterReference.GenericContainer as IBasicType);
+                if (cecilContainingType is GenericInstanceType genericInstanceType)
+                    return genericInstanceType.ElementType.GenericParameters.ElementAt(genericParameterReference.Index);
+                return cecilContainingType.GenericParameters.ElementAt(genericParameterReference.Index);
+            }
+            else if (genericParameterReference.Kind == GenericParameterKind.Method)
+            {
+                Model.Types.MethodReference methodRef = genericParameterReference.GenericContainer as Model.Types.MethodReference;
+                Mono.Cecil.MethodReference m = new Mono.Cecil.MethodReference(methodRef.Name,
+                    this.GenerateTypeReference(methodRef.ReturnType),
+                    this.GenerateTypeReference(methodRef.ContainingType))
+                {
+                    HasThis = !methodRef.IsStatic
+                };
+                return m.GenericParameters.ElementAt(genericParameterReference.Index);
+            }
+            else
+                throw new NotImplementedException();
+        }
+
         public TypeReference GenerateTypeReference(Model.Types.IType type)
         {
             if (type is IBasicType basicType)
                 return GenerateTypeReference(basicType);
 
             if (type is IGenericParameterReference genericParameterReference)
-            {
-                if (genericParameterReference.Kind == GenericParameterKind.Type)
-                {
-                    var cecilContainingType = this.GenerateTypeReference(genericParameterReference.GenericContainer as IBasicType);
-                    if (cecilContainingType is GenericInstanceType genericInstanceType)
-                        return genericInstanceType.ElementType.GenericParameters.ElementAt(genericParameterReference.Index);
-                    return cecilContainingType.GenericParameters.ElementAt(genericParameterReference.Index);
-
-                } else if (genericParameterReference.Kind == GenericParameterKind.Method)
-                {
-                    Model.Types.MethodReference methodRef = genericParameterReference.GenericContainer as Model.Types.MethodReference;
-                    Mono.Cecil.MethodReference m = new Mono.Cecil.MethodReference(methodRef.Name,
-                        this.GenerateTypeReference(methodRef.ReturnType),
-                        this.GenerateTypeReference(methodRef.ContainingType))
-                    {
-                        HasThis = !methodRef.IsStatic
-                    };
-                    return m.GenericParameters.ElementAt(genericParameterReference.Index);
-                } else 
-                    throw new NotImplementedException();
-            }
+                return GenerateTypeReference(genericParameterReference);
 
             if (type is Model.Types.FunctionPointerType functionPointerType)
             {
