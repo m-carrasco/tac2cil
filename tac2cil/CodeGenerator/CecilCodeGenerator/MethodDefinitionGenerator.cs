@@ -513,9 +513,19 @@ namespace CodeGenerator.CecilCodeGenerator
                 FieldReference fieldReference = GenerateFieldReference(instruction.Field);
                 Mono.Cecil.Cil.Instruction cilIns;
                 if (instruction.Operation == Model.Bytecode.LoadFieldOperation.Content)
-                    cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldfld, fieldReference);
+                {
+                    if (!instruction.Field.IsStatic)
+                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldfld, fieldReference);
+                    else
+                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldsfld, fieldReference);
+                }
                 else
-                    throw new NotImplementedException();
+                {
+                    if (!instruction.Field.IsStatic)
+                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldflda, fieldReference);
+                    else
+                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldsflda, fieldReference);
+                }
 
                 this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
             }
