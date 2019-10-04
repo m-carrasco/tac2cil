@@ -50,6 +50,9 @@ namespace Tests
 
             "Tests.Resources.Generics.cs/Test.Program/Test", // 21
             "Tests.Resources.Generics.cs/Test.Program/Test1", // 22
+
+            "Tests.Resources.ExternGeneric.cs/Test.Program/Test", // 23
+            "Tests.Resources.ExternGeneric.cs/Test.Program/Test1", // 24
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -76,7 +79,9 @@ namespace Tests
             null, // 19
             null, // 20
             null, // 21
-            null // 22
+            null, // 22
+            null, //23
+            null, // 24
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
@@ -122,7 +127,9 @@ namespace Tests
             HashSet<string> ignore = new HashSet<string>()
             {
                 TestReturnValueSeeds[21],
-                TestReturnValueSeeds[22]
+                TestReturnValueSeeds[22],
+                TestReturnValueSeeds[23],
+                TestReturnValueSeeds[24]
             };
 
             if (ignore.Contains(testSeed))

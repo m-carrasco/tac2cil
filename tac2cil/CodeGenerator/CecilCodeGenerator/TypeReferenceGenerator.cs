@@ -21,6 +21,21 @@ namespace CodeGenerator.CecilCodeGenerator
             this.host = host;
         }
         
+        private string TypeNameForExternTypes(IBasicType basicType)
+        {
+            if (basicType.GenericParameterCount == 0)
+                return basicType.Name;
+
+            var arguments = string.Empty;
+
+            if (basicType.GenericArguments.Count > 0)
+            {
+                arguments = string.Join(", ", basicType.GenericArguments);
+                arguments = string.Format("<{0}>", arguments);
+            }
+
+            return string.Format("{0}`{1}{2}", basicType.Name, basicType.GenericParameterCount, arguments);
+        }
         public TypeReference GenerateTypeReference(Model.Types.IBasicType basicType)
         {
             if (basicType.Equals(Model.Types.PlatformTypes.Object))
@@ -55,7 +70,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
                 {
                     IMetadataScope metadataScope = currentModule.TypeSystem.CoreLibrary;
-                    typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, null, metadataScope);
+                    typeReference = new TypeReference(basicType.ContainingNamespace, TypeNameForExternTypes(basicType), null, metadataScope);
                     typeReference = currentModule.ImportReference(typeReference);
                 }
                 else
