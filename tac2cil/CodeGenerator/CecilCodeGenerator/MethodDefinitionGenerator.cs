@@ -233,23 +233,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
             private FieldReference GenerateFieldReference(Model.Types.IFieldReference analysisNetFieldRef)
             {
-                TypeReference cecilType = null;
-
-                var genericType = analysisNetFieldRef.ContainingType.GenericType;
-                if (genericType != null && genericType.ResolvedType != null)
-                {
-                    // this is not the best solution because we may not be able to resolve the type
-                    // probably analysis-net should give us more information
-                    // if the type is an instantiated parameter type we must provide a reference to it
-                    // not to the instantiated type
-
-                    var resolvedGeneric = genericType.ResolvedType;
-                    var fieldInGeneric = resolvedGeneric.Fields.Where(f => f.Name.Equals(analysisNetFieldRef.Name)).First();
-
-                    if (fieldInGeneric.Type is Model.Types.IGenericParameterReference)
-                        cecilType = typeReferenceGenerator.GenerateTypeReference(fieldInGeneric.Type);
-                } else
-                    cecilType = typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.Type);
+                TypeReference cecilType = typeReferenceGenerator.GenerateTypeReference(analysisNetFieldRef.Type);
 
                 FieldReference fieldReference = new FieldReference(
                     analysisNetFieldRef.Name,
