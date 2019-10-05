@@ -5,7 +5,9 @@
 
 **tac2cil** complements **analysis-net** by providing the ability to compile a .NET program from the three-address code representation. This feature unlocks the possiblity to implement instrumentations/optimizations on .NET programs but from a much nicer abstraction (three-address code).
 
-![](/images/flow.svg)
+<p align="center">
+<img src="/images/flow.svg">
+</p>
 
 # Status
 
