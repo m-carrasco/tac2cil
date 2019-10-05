@@ -36,6 +36,60 @@ namespace CodeGenerator.CecilCodeGenerator
 
             return string.Format("{0}`{1}{2}", basicType.Name, basicType.GenericParameterCount, arguments);
         }
+        
+
+        // todo: move to another class or change name of the class
+        public Mono.Cecil.MethodReference GenerateMethodReference(Model.Types.IMethodReference method)
+        {
+            var containingType = this.GenerateTypeReference(method.ContainingType);
+
+            var methodReference = new Mono.Cecil.MethodReference(method.Name,
+                currentModule.TypeSystem.Void,
+                containingType);
+
+            methodReference.GenericParameters.AddRange(Enumerable.Repeat(new Mono.Cecil.GenericParameter(methodReference), method.GenericParameterCount));
+
+            TypeReference returnType;
+            if (method.ReturnType is IGenericParameterReference genericParameterReference && genericParameterReference.GenericContainer == method)
+                returnType = methodReference.GenericParameters.ElementAt(genericParameterReference.Index);
+            else
+                returnType = this.GenerateTypeReference(method.ReturnType);
+
+            methodReference.ReturnType = returnType;
+
+            foreach (var param in method.Parameters)
+            {
+                TypeReference paramType;
+
+                if (param.Type is Model.Types.IGenericParameterReference genericParameterReferenceParam && genericParameterReferenceParam.GenericContainer == method)
+                    paramType = methodReference.GenericParameters.ElementAt(genericParameterReferenceParam.Index);
+                else
+                    paramType = this.GenerateTypeReference(param.Type);
+
+                methodReference.Parameters.Add(new ParameterDefinition(paramType));
+            }
+
+            if (!method.IsStatic)
+                methodReference.HasThis = true;
+
+            if (method.GenericArguments.Count > 0)
+            {
+                var genericInstance = new GenericInstanceMethod(methodReference);
+                foreach (var arg in method.GenericArguments)
+                {
+                    if (arg is Model.Types.IGenericParameterReference genericParameterReferenceParam && genericParameterReferenceParam.GenericContainer == method)
+                        genericInstance.GenericArguments.Add(methodReference.GenericParameters.ElementAt(genericParameterReferenceParam.Index));
+                    else
+                        genericInstance.GenericArguments.Add(GenerateTypeReference(arg));
+                }
+
+                methodReference = genericInstance;
+            } 
+
+            methodReference = currentModule.ImportReference(methodReference);
+            return methodReference;
+        }
+
         public TypeReference GenerateTypeReference(Model.Types.IBasicType basicType)
         {
             if (basicType.Equals(Model.Types.PlatformTypes.Object))
@@ -102,7 +156,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     foreach (var arg in basicType.GenericArguments)
                     {
                         // Is it T_i ?
-                        if (arg is IGenericParameterReference genericParameterRef)
+                        if (arg is IGenericParameterReference genericParameterRef &&
+                            genericParameterRef.GenericContainer == basicType)
                             arguments.Add(cecilGenericType.GenericParameters.ElementAt(genericParameterRef.Index));
                         else
                             arguments.Add(GenerateTypeReference(arg));
@@ -129,19 +184,14 @@ namespace CodeGenerator.CecilCodeGenerator
             }
             else if (genericParameterReference.Kind == GenericParameterKind.Method)
             {
-                Model.Types.MethodReference methodRef = genericParameterReference.GenericContainer as Model.Types.MethodReference;
-                Mono.Cecil.MethodReference m = new Mono.Cecil.MethodReference(methodRef.Name,
-                    this.GenerateTypeReference(methodRef.ReturnType),
-                    this.GenerateTypeReference(methodRef.ContainingType))
-                {
-                    HasThis = !methodRef.IsStatic
-                };
+                Model.Types.IMethodReference analysisNetMethod = genericParameterReference.GenericContainer as IMethodReference;
+                Mono.Cecil.MethodReference m = GenerateMethodReference(analysisNetMethod);
                 return m.GenericParameters.ElementAt(genericParameterReference.Index);
             }
             else
                 throw new NotImplementedException();
         }
-
+ 
         public TypeReference GenerateTypeReference(Model.Types.IType type)
         {
             if (type is IBasicType basicType)

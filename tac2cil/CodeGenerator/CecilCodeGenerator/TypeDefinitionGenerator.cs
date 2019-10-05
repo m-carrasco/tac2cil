@@ -59,7 +59,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (field.IsStatic)
                         fieldAttribute |= FieldAttributes.Static;
 
-                    TypeReference fieldType = field.Type is IGenericParameterReference genericReference ?
+                    TypeReference fieldType = field.Type is IGenericParameterReference genericReference && genericReference.GenericContainer == typeDefinition ?
                         t.GenericParameters.ElementAt(genericReference.Index)
                         : typeReferenceGenerator.GenerateTypeReference(field.Type);
 

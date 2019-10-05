@@ -92,6 +92,7 @@
     <EmbeddedResource Include="Resources\Generics.cs" />
     <EmbeddedResource Include="Resources\GenericsWhere.cs" />
     <EmbeddedResource Include="Resources\ExternGeneric.cs" />
+    <EmbeddedResource Include="Resources\GenericMethods.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />
