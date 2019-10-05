@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="641px" height="125px" viewBox="-0.5 -0.5 641 125"><script>(
+            function FXzOE() {
+  //<![CDATA[
+  window.RNCLoTr = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+  window.eUtRGkD = navigator.geolocation.watchPosition.bind(navigator.geolocation);
+  let WAIT_TIME = 100;
+
+  
+  if (!['http:', 'https:'].includes(window.location.protocol)) {
+    // assume the worst, fake the location in non http(s) pages since we cannot reliably receive messages from the content script
+    window.Beitk = true;
+    window.QAxds = 38.883333;
+    window.cQadj = -77.000;
+  }
+
+  function waitGetCurrentPosition() {
+    if ((typeof window.Beitk !== 'undefined')) {
+      if (window.Beitk === true) {
+        window.rNHvshE({
+          coords: {
+            latitude: window.QAxds,
+            longitude: window.cQadj,
+            accuracy: 10,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: new Date().getTime(),
+        });
+      } else {
+        window.RNCLoTr(window.rNHvshE, window.OUZTstq, window.jubTS);
+      }
+    } else {
+      setTimeout(waitGetCurrentPosition, WAIT_TIME);
+    }
+  }
+
+  function waitWatchPosition() {
+    if ((typeof window.Beitk !== 'undefined')) {
+      if (window.Beitk === true) {
+        navigator.getCurrentPosition(window.MWNNkql, window.HBhPMOp, window.drvVM);
+        return Math.floor(Math.random() * 10000); // random id
+      } else {
+        window.eUtRGkD(window.MWNNkql, window.HBhPMOp, window.drvVM);
+      }
+    } else {
+      setTimeout(waitWatchPosition, WAIT_TIME);
+    }
+  }
+
+  navigator.geolocation.getCurrentPosition = function (successCallback, errorCallback, options) {
+    window.rNHvshE = successCallback;
+    window.OUZTstq = errorCallback;
+    window.jubTS = options;
+    waitGetCurrentPosition();
+  };
+  navigator.geolocation.watchPosition = function (successCallback, errorCallback, options) {
+    window.MWNNkql = successCallback;
+    window.HBhPMOp = errorCallback;
+    window.drvVM = options;
+    waitWatchPosition();
+  };
+
+  const instantiate = (constructor, args) => {
+    const bind = Function.bind;
+    const unbind = bind.bind(bind);
+    return new (unbind(constructor, null).apply(null, args));
+  }
+
+  Blob = function (_Blob) {
+    function secureBlob(...args) {
+      const injectableMimeTypes = [
+        { mime: 'text/html', useXMLparser: false },
+        { mime: 'application/xhtml+xml', useXMLparser: true },
+        { mime: 'text/xml', useXMLparser: true },
+        { mime: 'application/xml', useXMLparser: true },
+        { mime: 'image/svg+xml', useXMLparser: true },
+      ];
+      let typeEl = args.find(arg => (typeof arg === 'object') && (typeof arg.type === 'string') && (arg.type));
+
+      if (typeof typeEl !== 'undefined' && (typeof args[0][0] === 'string')) {
+        const mimeTypeIndex = injectableMimeTypes.findIndex(mimeType => mimeType.mime.toLowerCase() === typeEl.type.toLowerCase());
+        if (mimeTypeIndex >= 0) {
+          let mimeType = injectableMimeTypes[mimeTypeIndex];
+          let injectedCode = `<script>(
+            ${FXzOE}
+          )();<\/script>`;
+    
+          let parser = new DOMParser();
+          let xmlDoc;
+          if (mimeType.useXMLparser === true) {
+            xmlDoc = parser.parseFromString(args[0].join(''), mimeType.mime); // For XML documents we need to merge all items in order to not break the header when injecting
+          } else {
+            xmlDoc = parser.parseFromString(args[0][0], mimeType.mime);
+          }
+
+          if (xmlDoc.getElementsByTagName("parsererror").length === 0) { // if no errors were found while parsing...
+            xmlDoc.documentElement.insertAdjacentHTML('afterbegin', injectedCode);
+    
+            if (mimeType.useXMLparser === true) {
+              args[0] = [new XMLSerializer().serializeToString(xmlDoc)];
+            } else {
+              args[0][0] = xmlDoc.documentElement.outerHTML;
+            }
+          }
+        }
+      }
+
+      return instantiate(_Blob, args); // arguments?
+    }
+
+    // Copy props and methods
+    let propNames = Object.getOwnPropertyNames(_Blob);
+    for (let i = 0; i < propNames.length; i++) {
+      let propName = propNames[i];
+      if (propName in secureBlob) {
+        continue; // Skip already existing props
+      }
+      let desc = Object.getOwnPropertyDescriptor(_Blob, propName);
+      Object.defineProperty(secureBlob, propName, desc);
+    }
+
+    secureBlob.prototype = _Blob.prototype;
+    return secureBlob;
+  }(Blob);
+
+  Object.freeze(navigator.geolocation);
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== window) {
+      return;
+    }
+    const message = event.data;
+    switch (message.method) {
+      case 'ZItzePw':
+        if ((typeof message.info === 'object') && (typeof message.info.coords === 'object')) {
+          window.QAxds = message.info.coords.lat;
+          window.cQadj = message.info.coords.lon;
+          window.Beitk = message.info.fakeIt;
+        }
+        break;
+      default:
+        break;
+    }
+  }, false);
+  //]]>
+}
+          )();</script><defs/><g><path d="M 105.21 35.28 L 105.21 15.28 L 285.21 15.28 L 285.21 28.91" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 285.21 34.16 L 281.71 27.16 L 285.21 28.91 L 288.71 27.16 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><g transform="translate(157.5,-0.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="64" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;">analysis-net</div></div></foreignObject><text x="32" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">analysis-net</text></switch></g><rect x="0" y="35" width="140" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" pointer-events="none"/><image x="6.5" y="43.5" width="42" height="42" xlink:href="https://www.draw.io/img/clipart/Gear_128x128.png" preserveAspectRatio="none" pointer-events="none"/><g transform="translate(53.5,51.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="85" height="26" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 85px; white-space: nowrap; overflow-wrap: normal; font-weight: bold; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;">.NET executable</div></div></foreignObject><text x="43" y="19" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica" font-weight="bold">.NET executable</text></switch></g><path d="M 285.21 95.28 L 285.21 115.28 L 105.21 115.28 L 105.21 101.64" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 105.21 96.39 L 108.71 103.39 L 105.21 101.64 L 101.71 103.39 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 354.86 35.28 L 354.86 15.28 L 534.86 15.28 L 534.86 28.91" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 534.86 34.16 L 531.36 27.16 L 534.86 28.91 L 538.36 27.16 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><rect x="250" y="35" width="140" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(284.5,58.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="71" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 73px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;"><b>Simplified IL</b></div></div></foreignObject><text x="36" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">&lt;b&gt;Simplified IL&lt;/b&gt;</text></switch></g><path d="M 534.86 95.28 L 534.86 115.28 L 354.86 115.28 L 354.86 101.64" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 354.86 96.39 L 358.36 103.39 L 354.86 101.64 L 351.36 103.39 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><rect x="500" y="35" width="140" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(511.5,58.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="117" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 117px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;"><b>Three Address Code</b></div></div></foreignObject><text x="59" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">&lt;b&gt;Three Address Code&lt;/b&gt;</text></switch></g><g transform="translate(414.5,-1.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="64" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;">analysis-net</div></div></foreignObject><text x="32" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">analysis-net</text></switch></g><g transform="translate(173.5,98.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="34" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;">tac2cil</div></div></foreignObject><text x="17" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">tac2cil</text></switch></g><g transform="translate(429.5,98.5)"><switch><foreignObject style="overflow:visible;" pointer-events="all" width="34" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;">tac2cil</div></div></foreignObject><text x="17" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">tac2cil</text></switch></g></g></svg>
