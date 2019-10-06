@@ -39,7 +39,7 @@ namespace CodeGenerator.CecilCodeGenerator
             else if (typeDefinition.Kind == TypeDefinitionKind.Class)
             {
                 string namespaceName = typeDefinition.ContainingNamespace.FullName;
-                var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.Name,
+                var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(),
                     Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public,  typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
 
                 var genericParameters = typeDefinition.GenericParameters.Select(p => new Mono.Cecil.GenericParameter(t));

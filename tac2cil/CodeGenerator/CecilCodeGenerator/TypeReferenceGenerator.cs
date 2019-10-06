@@ -4,6 +4,7 @@ using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 
@@ -20,23 +21,6 @@ namespace CodeGenerator.CecilCodeGenerator
             this.assembliesMap = assembliesMap;
             this.host = host;
         }
-        
-        private string TypeNameForExternTypes(IBasicType basicType)
-        {
-            if (basicType.GenericParameterCount == 0)
-                return basicType.Name;
-
-            var arguments = string.Empty;
-
-            if (basicType.GenericArguments.Count > 0)
-            {
-                arguments = string.Join(", ", basicType.GenericArguments);
-                arguments = string.Format("<{0}>", arguments);
-            }
-
-            return string.Format("{0}`{1}{2}", basicType.Name, basicType.GenericParameterCount, arguments);
-        }
-        
 
         // todo: move to another class or change name of the class
         public Mono.Cecil.MethodReference GenerateMethodReference(Model.Types.IMethodReference method)
@@ -125,7 +109,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 ModuleDefinition moduleDefinition = ModuleDefinitionForTypeDefinition(def); // get mono module for the analysis-net assembly
                 IMetadataScope metadataScope = null;
                 //IMetadataScope metadataScope = moduleDefinition; not sure if we should do this
-                typeReference = new TypeReference(basicType.ContainingNamespace, basicType.Name, moduleDefinition, metadataScope);
+                typeReference = new TypeReference(basicType.ContainingNamespace, basicType.MetadataName(), moduleDefinition, metadataScope);
 
                 if (moduleDefinition != currentModule)
                     typeReference = currentModule.ImportReference(typeReference);
@@ -135,7 +119,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
                 {
                     IMetadataScope metadataScope = currentModule.TypeSystem.CoreLibrary;
-                    typeReference = new TypeReference(basicType.ContainingNamespace, TypeNameForExternTypes(basicType), null, metadataScope);
+                    typeReference = new TypeReference(basicType.ContainingNamespace, basicType.MetadataName(), null, metadataScope);
                     typeReference = currentModule.ImportReference(typeReference);
                 }
                 else
