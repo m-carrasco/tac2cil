@@ -55,6 +55,8 @@ namespace Tests
             "Tests.Resources.ExternGeneric.cs/Test.Program/Test1", // 24
 
             "Tests.Resources.GenericMethods.cs/Test.Program/Test", // 25
+
+            "Tests.Resources.GenericsWhere.cs/Test.Program/Test", // 26
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -85,6 +87,7 @@ namespace Tests
             null, //23
             null, // 24
             null, // 25
+            null, // 26
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
@@ -133,7 +136,8 @@ namespace Tests
                 TestReturnValueSeeds[22],
                 TestReturnValueSeeds[23],
                 TestReturnValueSeeds[24],
-                TestReturnValueSeeds[25]
+                TestReturnValueSeeds[25],
+                TestReturnValueSeeds[26],
             };
 
             if (ignore.Contains(testSeed))

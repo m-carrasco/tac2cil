@@ -44,7 +44,12 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 var genericParameters = typeDefinition.GenericParameters.Select(p => new Mono.Cecil.GenericParameter(t));
                 foreach (var gp in genericParameters)
+                {
                     t.GenericParameters.Add(gp);
+                    var constraints = typeDefinition.GenericParameters.ElementAt(gp.Position)
+                        .Constraints.Select(c => new GenericParameterConstraint(typeReferenceGenerator.GenerateTypeReference(c)));
+                    gp.Constraints.AddRange(constraints);
+                }
 
                 foreach (var methodDefinition in typeDefinition.Methods)
                 {

@@ -84,7 +84,18 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
 
                 methodReference = genericInstance;
-            } 
+            }
+
+            if (method.GenericParameterCount > 0 && method.ResolvedMethod != null)
+            {
+                Model.Types.MethodDefinition analysisNetDef = method.ResolvedMethod;
+                foreach (var gp in methodReference.GenericParameters)
+                {
+                    var constraints = analysisNetDef.GenericParameters.ElementAt(gp.Position)
+                        .Constraints.Select(constraint => new GenericParameterConstraint(GenerateTypeReference(constraint)));
+                    gp.Constraints.AddRange(constraints);
+                }
+            }
 
             methodReference = currentModule.ImportReference(methodReference);
             return methodReference;
@@ -140,9 +151,9 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 if (basicType.GenericArguments.Count == 0)
                 {
+                    // create generic parameters
                     var genericParameters = Enumerable.Repeat(new Mono.Cecil.GenericParameter(typeReference), basicType.GenericParameterCount);
-                    foreach (var gp in genericParameters)
-                        typeReference.GenericParameters.Add(gp);
+                    typeReference.GenericParameters.AddRange(genericParameters);
                 } else
                 {
                     // not instantiated
@@ -164,6 +175,18 @@ namespace CodeGenerator.CecilCodeGenerator
                     }
 
                     typeReference = cecilGenericType.MakeGenericInstanceType(arguments.ToArray());
+                }
+
+                if (basicType.ResolvedType != null)
+                {
+                    Model.Types.TypeDefinition analysisNetDef = basicType.ResolvedType;
+                    
+                    foreach (var gp in typeReference.GenericParameters)
+                    {
+                        var constraints = analysisNetDef.GenericParameters.ElementAt(gp.Position)
+                            .Constraints.Select(constraint => new GenericParameterConstraint(GenerateTypeReference(constraint)));
+                        gp.Constraints.AddRange(constraints);
+                    }
                 }
             }
 
