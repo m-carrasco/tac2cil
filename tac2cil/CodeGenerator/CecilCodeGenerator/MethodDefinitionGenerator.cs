@@ -208,6 +208,12 @@ namespace CodeGenerator.CecilCodeGenerator
                 return fieldReference;
             }
 
+            public override void Visit(ConstrainedInstruction instruction)
+            {
+                Mono.Cecil.Cil.Instruction ins = processor.Create(Mono.Cecil.Cil.OpCodes.Constrained, typeReferenceGenerator.GenerateTypeReference(instruction.ThisType));
+                this.Result = new List<Mono.Cecil.Cil.Instruction>() { ins };
+            }
+
             public override void Visit(Model.Bytecode.BasicInstruction instruction)
             {
                 Nullable<Mono.Cecil.Cil.OpCode> op = null;
