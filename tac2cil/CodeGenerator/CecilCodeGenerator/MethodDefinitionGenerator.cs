@@ -237,6 +237,22 @@ namespace CodeGenerator.CecilCodeGenerator
                             op = Mono.Cecil.Cil.OpCodes.Add;
                         }
                         break;
+                    case Model.Bytecode.BasicOperation.Sub:
+                        if (instruction.OverflowCheck && instruction.UnsignedOperands)
+                        {
+                            op = Mono.Cecil.Cil.OpCodes.Sub_Ovf_Un;
+                        }
+                        else if (instruction.OverflowCheck && !instruction.UnsignedOperands)
+                        {
+                            op = Mono.Cecil.Cil.OpCodes.Sub_Ovf;
+                        }
+                        else if (!instruction.OverflowCheck && !instruction.UnsignedOperands)
+                        {
+                            op = Mono.Cecil.Cil.OpCodes.Sub;
+                        }
+                        else
+                            throw new NotImplementedException();
+                        break;
                     case Model.Bytecode.BasicOperation.Nop:
                         op = Mono.Cecil.Cil.OpCodes.Nop;
                         break;
