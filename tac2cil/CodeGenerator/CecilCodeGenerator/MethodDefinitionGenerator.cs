@@ -28,15 +28,16 @@ namespace CodeGenerator.CecilCodeGenerator
             Contract.Assert(containingType != null);
             Contract.Assert(methodDefinition != null);
             Contract.Assert(currentModule != null);
-            Contract.Assert(methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
+            Contract.Assert(methodDefinition.Body == null || methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
         }
 
         private Mono.Cecil.MethodAttributes GenerateMethodAttributes()
         {
-            if (methodDefinition.IsExternal)
+            // readme: methods defined in interfaces are flagged as external (cci does it)
+            // even if the assembly in which they are defined is loaded. The same happens with abstract methods.
+            if (methodDefinition.IsExternal && 
+                methodDefinition.ContainingType.Kind != Model.Types.TypeDefinitionKind.Interface && !methodDefinition.IsAbstract)
             {
-                // i dont know what it should be in mono
-                // maybe this does not correspond to a mono cecil attribute
                 throw new NotImplementedException();
             }
 
@@ -69,51 +70,89 @@ namespace CodeGenerator.CecilCodeGenerator
                 methodDef.GenericParameters.Add(gp);
 
             methodDef.DeclaringType = containingType;
-            methodDef.Body.MaxStackSize = methodDefinition.Body.MaxStack;
-            IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
-            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
+
+            if (methodDef.Body != null)
             {
-                //if (localVariable.Type is Model.Types.PointerType)
-                //    throw new NotImplementedException(); // we should specify if it is in/ref?
+                methodDef.Body.MaxStackSize = methodDefinition.Body.MaxStack;
 
-                var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
-                methodDef.Body.Variables.Add(varDef);
-                variableDefinitions[localVariable] = varDef;
-            }
-
-            IDictionary<IVariable, ParameterDefinition> parameterDefinitions = new Dictionary<IVariable, ParameterDefinition>();
-            foreach (IVariable localVariable in methodDefinition.Body.Parameters)
-            {
-                //if (localVariable.Type is Model.Types.PointerType)
-                //    throw new NotImplementedException(); // we should specify if it is in/ref?
-
-                if (localVariable.Name == "this")
+                IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
+                foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
                 {
-                    parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
-                    continue;
+                    //if (localVariable.Type is Model.Types.PointerType)
+                    //    throw new NotImplementedException(); // we should specify if it is in/ref?
+
+                    var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
+                    methodDef.Body.Variables.Add(varDef);
+                    variableDefinitions[localVariable] = varDef;
                 }
 
-                var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
-                methodDef.Parameters.Add(paramDef);
-                parameterDefinitions[localVariable] = paramDef;
+                IDictionary<IVariable, ParameterDefinition> parameterDefinitions = new Dictionary<IVariable, ParameterDefinition>();
+                //foreach (IVariable localVariable in methodDefinition.Body.Parameters)
+                for (int i=0; i < methodDefinition.Body.Parameters.Count; i++)
+                {
+                    IVariable localVariable = methodDefinition.Body.Parameters[i];
+
+                    //if (localVariable.Type is Model.Types.PointerType)
+                    //    throw new NotImplementedException(); // we should specify if it is in/ref?
+
+                    if (localVariable.Name == "this")
+                    {
+                        parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
+                        continue;
+                    }
+
+                    var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
+                    paramDef.Constant = GetDefaultValueFromBodyParamIndex(methodDefinition, i);
+
+                    methodDef.Parameters.Add(paramDef);
+                    parameterDefinitions[localVariable] = paramDef;
+                }
+
+                ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
+                BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor, currentModule);
+
+                IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated
+                    = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
+
+                // branch instruction targets are delayed until all mono cecil instruction objects are created 
+                TranslateInstructions(translator, translated);
+                TranslatePendingBranches(translated, methodDefinition.Body.Instructions.OfType<BranchInstruction>().ToList());
+
+                foreach (Mono.Cecil.Cil.Instruction ins in translated.Values.SelectMany(l => l))
+                    ilProcessor.Append(ins);
+            } else
+            {
+                foreach (var methodParameter in methodDefinition.Parameters)
+                {
+                    if (methodParameter.Name.Equals("this"))
+                        continue;
+
+                    var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(methodParameter.Type));
+                    if (methodParameter.DefaultValue != null)
+                        paramDef.Constant = methodParameter.DefaultValue.Value;
+
+                    methodDef.Parameters.Add(paramDef);
+                }
             }
-
-            ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
-            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor, currentModule);
-
-            IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated 
-                = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
-
-            // branch instruction targets are delayed until all mono cecil instruction objects are created 
-            TranslateInstructions(translator, translated);
-            TranslatePendingBranches(translated, methodDefinition.Body.Instructions.OfType<BranchInstruction>().ToList());
-
-            foreach (Mono.Cecil.Cil.Instruction ins in translated.Values.SelectMany(l => l))
-               ilProcessor.Append(ins);
             
             return methodDef;
         }
         
+        private Object GetDefaultValueFromBodyParamIndex(Model.Types.MethodDefinition methodDefinition, int bodyParamIndex)
+        {
+            // body parameters contains 'this' while signature parameteres do not.
+
+            int idx = bodyParamIndex;
+            if (!methodDefinition.IsStatic)
+                idx--;
+
+            var defaultValue = methodDefinition.Parameters.ElementAt(idx).DefaultValue;
+
+            if (defaultValue != null)
+                return defaultValue.Value;
+
+            return null;
+        }
         private void TranslateInstructions(BytecodeTranslator translator, IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated)
         {
             foreach (Model.Bytecode.Instruction ins in methodDefinition.Body.Instructions)

@@ -57,6 +57,15 @@ namespace Tests
             "Tests.Resources.GenericMethods.cs/Test.Program/Test", // 25
 
             "Tests.Resources.GenericsWhere.cs/Test.Program/Test", // 26
+
+            "Tests.Resources.Interfaces.cs/Test.Program/Test1", // 27
+            "Tests.Resources.Interfaces.cs/Test.Program/Test2", // 28
+            "Tests.Resources.Interfaces.cs/Test.Program/Test3", // 29
+
+            "Tests.Resources.Inheritance.cs/Test.Program/Test1", //30
+            "Tests.Resources.Inheritance.cs/Test.Program/Test2", // 31
+            "Tests.Resources.Inheritance.cs/Test.Program/Test3", // 32
+
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -88,6 +97,12 @@ namespace Tests
             null, // 24
             null, // 25
             null, // 26
+            10, // 27
+            10, // 28
+            null, // 29
+            10, // 30
+            10, // 31
+            null // 32
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)

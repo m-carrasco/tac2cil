@@ -34,51 +34,71 @@ namespace CodeGenerator.CecilCodeGenerator
             }
             else if (typeDefinition.Kind == TypeDefinitionKind.Interface)
             {
-                throw new NotImplementedException();
+                return CreateInterfaceDefinition(typeDefinition);
             }
             else if (typeDefinition.Kind == TypeDefinitionKind.Class)
             {
-                string namespaceName = typeDefinition.ContainingNamespace.FullName;
-                var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(),
-                    Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public,  typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
-
-                var genericParameters = typeDefinition.GenericParameters.Select(p => new Mono.Cecil.GenericParameter(t));
-                foreach (var gp in genericParameters)
-                {
-                    t.GenericParameters.Add(gp);
-                    var constraints = typeDefinition.GenericParameters.ElementAt(gp.Position)
-                        .Constraints.Select(c => new GenericParameterConstraint(typeReferenceGenerator.GenerateTypeReference(c)));
-                    gp.Constraints.AddRange(constraints);
-                }
-
-                foreach (var methodDefinition in typeDefinition.Methods)
-                {
-                    MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t, module);
-                    t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
-                }
-
-                foreach (var field in typeDefinition.Fields)
-                {
-                    // analysis-net is not currently giving this information
-                    var fieldAttribute = FieldAttributes.Public;
-                    if (field.IsStatic)
-                        fieldAttribute |= FieldAttributes.Static;
-
-                    TypeReference fieldType = field.Type is IGenericParameterReference genericReference && genericReference.GenericContainer == typeDefinition ?
-                        t.GenericParameters.ElementAt(genericReference.Index)
-                        : typeReferenceGenerator.GenerateTypeReference(field.Type);
-
-                    Mono.Cecil.FieldDefinition fieldDefinition = new Mono.Cecil.FieldDefinition(field.Name, fieldAttribute,fieldType);
-                    t.Fields.Add(fieldDefinition);
-                }
-
-                foreach (var inter in typeDefinition.Interfaces)
-                    t.Interfaces.Add(new InterfaceImplementation(typeReferenceGenerator.GenerateTypeReference(inter)));
-
-                return t;
+                return CreateClassDefinition(typeDefinition);
             }
 
             throw new NotImplementedException();
+        }
+
+        private Mono.Cecil.TypeDefinition CreateInterfaceDefinition(Model.Types.TypeDefinition typeDefinition)
+        {
+            var cecilDefinition = CreateClassDefinition(typeDefinition);
+            cecilDefinition.Attributes |= TypeAttributes.Interface;
+            cecilDefinition.Attributes |= TypeAttributes.Abstract;
+            // todo: not sure about this
+            cecilDefinition.Attributes &= ~TypeAttributes.Class;
+            return cecilDefinition;
+        }
+
+        private Mono.Cecil.TypeDefinition CreateClassDefinition(Model.Types.TypeDefinition typeDefinition)
+        {
+            string namespaceName = typeDefinition.ContainingNamespace.FullName;
+            var t = new Mono.Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(),
+                Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public, typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base));
+
+            // hack: an abstract class can have no abstract methods
+            // there is no field in the type definition
+            if (typeDefinition.Methods.Any(m => m.IsAbstract))
+                t.Attributes |= Mono.Cecil.TypeAttributes.Abstract;
+
+            var genericParameters = typeDefinition.GenericParameters.Select(p => new Mono.Cecil.GenericParameter(t));
+            foreach (var gp in genericParameters)
+            {
+                t.GenericParameters.Add(gp);
+                var constraints = typeDefinition.GenericParameters.ElementAt(gp.Position)
+                    .Constraints.Select(c => new GenericParameterConstraint(typeReferenceGenerator.GenerateTypeReference(c)));
+                gp.Constraints.AddRange(constraints);
+            }
+
+            foreach (var methodDefinition in typeDefinition.Methods)
+            {
+                MethodDefinitionGenerator methodDefinitionGen = new MethodDefinitionGenerator(methodDefinition, typeReferenceGenerator, t, module);
+                t.Methods.Add(methodDefinitionGen.GenerateMethodDefinition());
+            }
+
+            foreach (var field in typeDefinition.Fields)
+            {
+                // analysis-net is not currently giving this information
+                var fieldAttribute = FieldAttributes.Public;
+                if (field.IsStatic)
+                    fieldAttribute |= FieldAttributes.Static;
+
+                TypeReference fieldType = field.Type is IGenericParameterReference genericReference && genericReference.GenericContainer == typeDefinition ?
+                    t.GenericParameters.ElementAt(genericReference.Index)
+                    : typeReferenceGenerator.GenerateTypeReference(field.Type);
+
+                Mono.Cecil.FieldDefinition fieldDefinition = new Mono.Cecil.FieldDefinition(field.Name, fieldAttribute, fieldType);
+                t.Fields.Add(fieldDefinition);
+            }
+
+            foreach (var inter in typeDefinition.Interfaces)
+                t.Interfaces.Add(new InterfaceImplementation(typeReferenceGenerator.GenerateTypeReference(inter)));
+
+            return t;
         }
     }
 
