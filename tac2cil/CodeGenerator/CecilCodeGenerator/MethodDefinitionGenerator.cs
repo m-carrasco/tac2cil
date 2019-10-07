@@ -63,76 +63,97 @@ namespace CodeGenerator.CecilCodeGenerator
             return res;
         }
 
+        private IDictionary<IVariable, VariableDefinition> CreateLocalVariables(Model.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
+        {
+            IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
+
+            foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
+            {
+                var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
+                methodDef.Body.Variables.Add(varDef);
+                variableDefinitions[localVariable] = varDef;
+            }
+
+            return variableDefinitions;
+        }
+
+        private void CreateParametersWithoutBody(Model.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
+        {
+            foreach (var methodParameter in methodDefinition.Parameters)
+            {
+                if (methodParameter.Name.Equals("this"))
+                    continue;
+
+                var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(methodParameter.Type));
+                if (methodParameter.DefaultValue != null)
+                    paramDef.Constant = methodParameter.DefaultValue.Value;
+
+                methodDef.Parameters.Add(paramDef);
+            }
+        }
+
+        private IDictionary<IVariable, ParameterDefinition> CreateParametersWithBody(Model.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
+        {
+            IDictionary<IVariable, ParameterDefinition> parameterDefinitions = new Dictionary<IVariable, ParameterDefinition>();
+            for (int i = 0; i < methodDefinition.Body.Parameters.Count; i++)
+            {
+                IVariable localVariable = methodDefinition.Body.Parameters[i];
+                if (localVariable.Name == "this")
+                {
+                    parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
+                    continue;
+                }
+
+                var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
+                paramDef.Constant = GetDefaultValueFromBodyParamIndex(methodDefinition, i);
+
+                methodDef.Parameters.Add(paramDef);
+                parameterDefinitions[localVariable] = paramDef;
+            }
+            return parameterDefinitions;
+        }
+
+        private void CreateInstructions(Model.Types.MethodDefinition methodDefinition,
+            Mono.Cecil.MethodDefinition methodDef,
+            IDictionary<IVariable, VariableDefinition> variableDefinitions,
+            IDictionary<IVariable, ParameterDefinition> parameterDefinitions)
+        {
+            ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
+            BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor, currentModule);
+
+            IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated
+                = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
+
+            // branch instruction targets are delayed until all mono cecil instruction objects are created 
+            TranslateInstructions(translator, translated);
+            TranslatePendingBranches(translated, methodDefinition.Body.Instructions.OfType<BranchInstruction>().ToList());
+
+            foreach (Mono.Cecil.Cil.Instruction ins in translated.Values.SelectMany(l => l))
+                ilProcessor.Append(ins);
+        }
+
+        private void CreateGenericParameters(Model.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
+        {
+            foreach (var gp in Enumerable.Repeat(new GenericParameter(methodDef), methodDefinition.GenericParameters.Count))
+                methodDef.GenericParameters.Add(gp);
+        }
+
         public Mono.Cecil.MethodDefinition GenerateMethodDefinition()
         {
             Mono.Cecil.MethodDefinition methodDef = new Mono.Cecil.MethodDefinition(methodDefinition.Name, GenerateMethodAttributes(), typeReferenceGenerator.GenerateTypeReference(methodDefinition.ReturnType));
-            foreach (var gp in Enumerable.Repeat(new GenericParameter(methodDef), methodDefinition.GenericParameters.Count))
-                methodDef.GenericParameters.Add(gp);
-
+            
+            CreateGenericParameters(methodDefinition, methodDef);
             methodDef.DeclaringType = containingType;
 
-            if (methodDef.Body != null)
+            if (methodDefinition.HasBody)
             {
                 methodDef.Body.MaxStackSize = methodDefinition.Body.MaxStack;
-
-                IDictionary<IVariable, VariableDefinition> variableDefinitions = new Dictionary<IVariable, VariableDefinition>();
-                foreach (IVariable localVariable in methodDefinition.Body.LocalVariables)
-                {
-                    //if (localVariable.Type is Model.Types.PointerType)
-                    //    throw new NotImplementedException(); // we should specify if it is in/ref?
-
-                    var varDef = new VariableDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
-                    methodDef.Body.Variables.Add(varDef);
-                    variableDefinitions[localVariable] = varDef;
-                }
-
-                IDictionary<IVariable, ParameterDefinition> parameterDefinitions = new Dictionary<IVariable, ParameterDefinition>();
-                //foreach (IVariable localVariable in methodDefinition.Body.Parameters)
-                for (int i=0; i < methodDefinition.Body.Parameters.Count; i++)
-                {
-                    IVariable localVariable = methodDefinition.Body.Parameters[i];
-
-                    //if (localVariable.Type is Model.Types.PointerType)
-                    //    throw new NotImplementedException(); // we should specify if it is in/ref?
-
-                    if (localVariable.Name == "this")
-                    {
-                        parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
-                        continue;
-                    }
-
-                    var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(localVariable.Type));
-                    paramDef.Constant = GetDefaultValueFromBodyParamIndex(methodDefinition, i);
-
-                    methodDef.Parameters.Add(paramDef);
-                    parameterDefinitions[localVariable] = paramDef;
-                }
-
-                ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
-                BytecodeTranslator translator = new BytecodeTranslator(methodDef, variableDefinitions, parameterDefinitions, typeReferenceGenerator, ilProcessor, currentModule);
-
-                IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated
-                    = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
-
-                // branch instruction targets are delayed until all mono cecil instruction objects are created 
-                TranslateInstructions(translator, translated);
-                TranslatePendingBranches(translated, methodDefinition.Body.Instructions.OfType<BranchInstruction>().ToList());
-
-                foreach (Mono.Cecil.Cil.Instruction ins in translated.Values.SelectMany(l => l))
-                    ilProcessor.Append(ins);
+                IDictionary<IVariable, VariableDefinition> variableDefinitions = CreateLocalVariables(methodDefinition, methodDef);
+                IDictionary<IVariable, ParameterDefinition> parameterDefinitions = CreateParametersWithBody(methodDefinition, methodDef);
+                CreateInstructions(methodDefinition, methodDef, variableDefinitions, parameterDefinitions);
             } else
             {
-                foreach (var methodParameter in methodDefinition.Parameters)
-                {
-                    if (methodParameter.Name.Equals("this"))
-                        continue;
-
-                    var paramDef = new ParameterDefinition(typeReferenceGenerator.GenerateTypeReference(methodParameter.Type));
-                    if (methodParameter.DefaultValue != null)
-                        paramDef.Constant = methodParameter.DefaultValue.Value;
-
-                    methodDef.Parameters.Add(paramDef);
-                }
+                CreateParametersWithoutBody(methodDefinition, methodDef);
             }
             
             return methodDef;

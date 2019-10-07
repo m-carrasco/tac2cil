@@ -85,7 +85,51 @@ namespace CodeGenerator.CecilCodeGenerator
             return methodReference;
         }
 
+        private void SetModuleAndMetadata(IBasicType basicType, ref ModuleDefinition moduleDefinition, ref IMetadataScope metadataScope)
+        {
+            // if the module corresponds to a loaded assembly, use it
+            // if there is no module in the loaded assemblies, then we need to create an assembly reference
+            // for now we only handle it for the mscorlib
+
+            var def = basicType.ResolvedType;
+
+            if (def != null)
+            {
+                moduleDefinition = ModuleDefinitionForTypeDefinition(def);
+            }
+            else
+            {
+                if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
+                {
+                    metadataScope = currentModule.TypeSystem.CoreLibrary;
+                }
+                else
+                    throw new NotImplementedException();
+            }
+        }
+
         public TypeReference GenerateTypeReference(Model.Types.IBasicType basicType)
+        {
+            TypeReference platformType = TypeReferenceToPlatformType(basicType);
+            if (platformType != null)
+                return platformType;
+            
+            ModuleDefinition moduleDefinition = null;
+            IMetadataScope metadataScope = null;
+            SetModuleAndMetadata(basicType, ref moduleDefinition, ref metadataScope);
+
+            TypeReference typeReference = new TypeReference(basicType.ContainingNamespace, basicType.MetadataName(), moduleDefinition, metadataScope); ;
+
+            // if there is no module (so it is an assembly reference) or the module is not the current one, import the reference.
+            if (moduleDefinition == null || moduleDefinition != currentModule)
+                typeReference = currentModule.ImportReference(typeReference);
+
+            CreateGenericParameters(basicType, ref typeReference);
+
+            return typeReference;
+        }
+
+        private TypeReference TypeReferenceToPlatformType(IBasicType basicType)
         {
             if (basicType.Equals(Model.Types.PlatformTypes.Object))
                 return currentModule.TypeSystem.Object;
@@ -99,38 +143,20 @@ namespace CodeGenerator.CecilCodeGenerator
             if (basicType.Equals(Model.Types.PlatformTypes.String))
                 return currentModule.TypeSystem.String;
 
-            
-            Model.Types.TypeDefinition def = host.ResolveReference(basicType);
+            if (basicType.Equals(Model.Types.PlatformTypes.Boolean))
+                return currentModule.TypeSystem.Boolean;
 
-            TypeReference typeReference = null;
-            // is a reference to a type in an assembly loaded by analysis-net?
-            if (def != null) // yes, it is loaded by analysis-net
-            {
-                ModuleDefinition moduleDefinition = ModuleDefinitionForTypeDefinition(def); // get mono module for the analysis-net assembly
-                IMetadataScope metadataScope = null;
-                //IMetadataScope metadataScope = moduleDefinition; not sure if we should do this
-                typeReference = new TypeReference(basicType.ContainingNamespace, basicType.MetadataName(), moduleDefinition, metadataScope);
+            if (basicType.Equals(Model.Types.PlatformTypes.Boolean))
+                return currentModule.TypeSystem.Boolean;
 
-                if (moduleDefinition != currentModule)
-                    typeReference = currentModule.ImportReference(typeReference);
-            }
-            else // it is not loaded by analysis-net
-            {
-                if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
-                {
-                    IMetadataScope metadataScope = currentModule.TypeSystem.CoreLibrary;
-                    typeReference = new TypeReference(basicType.ContainingNamespace, basicType.MetadataName(), null, metadataScope);
-                    typeReference = currentModule.ImportReference(typeReference);
-                }
-                else
-                {
-                    // this is a reference to a type in a assembly that we don't know much about it.
-                    // i guess we should create an implementation of the IMetadataScope based on the information given by analysis-net
+            if (basicType.Equals(Model.Types.PlatformTypes.Single))
+                return currentModule.TypeSystem.Single;
 
-                    throw new NotImplementedException();
-                }
-            }
+            return null;
+        }
 
+        private void CreateGenericParameters(IBasicType basicType, ref TypeReference typeReference)
+        {
             if (basicType.GenericParameterCount > 0)
             {
                 if (basicType.GenericArguments.Count == 0)
@@ -138,7 +164,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     // create generic parameters
                     var genericParameters = Enumerable.Repeat(new Mono.Cecil.GenericParameter(typeReference), basicType.GenericParameterCount);
                     typeReference.GenericParameters.AddRange(genericParameters);
-                } else
+                }
+                else
                 {
                     // not instantiated
                     var analysisNetGenericType = basicType.GenericType;
@@ -164,7 +191,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (basicType.ResolvedType != null)
                 {
                     Model.Types.TypeDefinition analysisNetDef = basicType.ResolvedType;
-                    
+
                     foreach (var gp in typeReference.GenericParameters)
                     {
                         var constraints = analysisNetDef.GenericParameters.ElementAt(gp.Position)
@@ -173,8 +200,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     }
                 }
             }
-
-            return typeReference;
         }
 
         public TypeReference GenerateTypeReference(Model.Types.IGenericParameterReference genericParameterReference)
