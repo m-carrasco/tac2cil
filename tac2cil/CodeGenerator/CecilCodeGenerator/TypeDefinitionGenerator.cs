@@ -54,11 +54,34 @@ namespace CodeGenerator.CecilCodeGenerator
             return cecilDefinition;
         }
 
+        private TypeAttributes GetVisibility(Model.Types.VisibilityKind visibility)
+        {
+            /*
+            // analysis-net maps NestedPublic and Public to VisibilityKind.Public
+            // analysis-net maps NestedAssembly and NotPublic to VisibilityKind.Internal
+            TypeAttributes res = 0;
+
+            if (visibility.HasFlag(VisibilityKind.Private))
+                res |= TypeAttributes.NestedPrivate;
+            if (visibility.HasFlag(VisibilityKind.Public))
+                res |= TypeAttributes.Public;
+            if (visibility.HasFlag(VisibilityKind.Internal) && !visibility.HasFlag(VisibilityKind.Protected))
+                res |= TypeAttributes.NotPublic;
+            if (visibility.HasFlag(VisibilityKind.Protected) && !visibility.HasFlag(VisibilityKind.Internal))
+                res |= TypeAttributes.NestedFamily;
+            if (visibility.HasFlag(VisibilityKind.Protected) && !visibility.HasFlag(VisibilityKind.Internal))
+                res |= TypeAttributes.NestedFamORAssem;
+
+            return res;*/
+
+            return TypeAttributes.Public;
+        }
+
         private Mono.Cecil.TypeDefinition CreateClassDefinition(Model.Types.TypeDefinition typeDefinition)
         {
             string namespaceName = typeDefinition.ContainingNamespace.FullName;
             TypeReference baseType = typeDefinition.Base == null ? null : typeReferenceGenerator.GenerateTypeReference(typeDefinition.Base);
-            TypeAttributes attributes = Mono.Cecil.TypeAttributes.Class | Mono.Cecil.TypeAttributes.Public;
+            TypeAttributes attributes = Mono.Cecil.TypeAttributes.Class | GetVisibility(typeDefinition.Visibility);
 
             // hack: an abstract class can have no abstract methods
             // there is no field in the type definition

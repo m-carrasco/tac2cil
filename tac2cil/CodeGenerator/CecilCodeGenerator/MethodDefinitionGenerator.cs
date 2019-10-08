@@ -31,6 +31,33 @@ namespace CodeGenerator.CecilCodeGenerator
             Contract.Assert(methodDefinition.Body == null || methodDefinition.Body.Kind == Model.Types.MethodBodyKind.Bytecode);
         }
 
+        private Mono.Cecil.MethodAttributes GetMethodVisibility()
+        {
+            /*var visibility = methodDefinition.Visibility;
+            MethodAttributes res = 0x0;
+
+            if (visibility.HasFlag(Model.Types.VisibilityKind.Public))
+                res |= MethodAttributes.Public;
+
+            if (visibility.HasFlag(Model.Types.VisibilityKind.Private))
+                res |= MethodAttributes.Private;
+
+            if (visibility.HasFlag(Model.Types.VisibilityKind.Protected) &&
+                visibility.HasFlag(Model.Types.VisibilityKind.Internal))
+                res |= MethodAttributes.FamORAssem;
+
+            if (visibility.HasFlag(Model.Types.VisibilityKind.Protected) &&
+                !visibility.HasFlag(Model.Types.VisibilityKind.Internal))
+                res |= MethodAttributes.Family;
+
+            if (!visibility.HasFlag(Model.Types.VisibilityKind.Protected) &&
+                visibility.HasFlag(Model.Types.VisibilityKind.Internal))
+                res |= MethodAttributes.Assembly;
+
+            return res; */
+
+            return MethodAttributes.Public;
+        }
         private Mono.Cecil.MethodAttributes GenerateMethodAttributes()
         {
             // readme: methods defined in interfaces are flagged as external (cci does it)
@@ -41,8 +68,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 throw new NotImplementedException();
             }
 
-            // for now we are forcing this!
-            MethodAttributes res = MethodAttributes.Public;
+            MethodAttributes res = GetMethodVisibility();
 
             if (methodDefinition.IsStatic)
                 res |= MethodAttributes.Static;
