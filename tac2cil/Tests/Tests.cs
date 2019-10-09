@@ -142,6 +142,19 @@ namespace Tests
 
             TestReturnValue(testSeed, parameters, false, false);
         }
+        [Test, Ignore("cci provider is failing")]
+        public void TestCompileDSA()
+        {
+            Model.Host host = new Model.Host();
+            Model.ILoader provider = new CCIProvider.Loader(host);
+
+            string dsaPath = System.Reflection.Assembly.GetAssembly(typeof(DSA.Algorithms.Sorting.BubbleSorter)).Location;
+            provider.LoadAssembly(dsaPath);
+
+            CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
+            string outputDir = Utils.GetTemporaryDirectory();
+            exporter.GenerateAssemblies(outputDir);
+        }
 
         private bool IgnoreInMetadataProvider(string testSeed)
         {
