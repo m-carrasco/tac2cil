@@ -7,7 +7,7 @@ using Mono.Cecil;
 
 namespace CodeGenerator.CecilCodeGenerator
 {
-    public class CecilCodeGenerator : ICodeGenerator
+    public class CecilCodeGenerator : ICodeGenerator<AssemblyDefinition>
     {
         private readonly Model.Host host;
         public CecilCodeGenerator(Model.Host h)
@@ -47,7 +47,7 @@ namespace CodeGenerator.CecilCodeGenerator
             return main;
         }
 
-        public void GenerateAssemblies(string pathToFolder)
+        public ICollection<AssemblyDefinition> GenerateAssemblies()
         {
             foreach (var analysisNetAssembly in host.Assemblies)
             {
@@ -81,7 +81,14 @@ namespace CodeGenerator.CecilCodeGenerator
                 module.EntryPoint = GetMainDefinitionInCecilModule(module);
             }
 
-            foreach (var assembly in assembliesMap.Values)
+            return assembliesMap.Values;
+        }
+
+        public void WriteAssemblies(string pathToFolder)
+        {
+            var assemblies = GenerateAssemblies();
+
+            foreach (var assembly in assemblies)
             {
                 assembly.Write(Path.Combine(pathToFolder, assembly.Name.Name));
             }

@@ -67,7 +67,7 @@ namespace Tests
 
             CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
             string outputDir = Utils.GetTemporaryDirectory();
-            exporter.GenerateAssemblies(outputDir);
+            exporter.WriteAssemblies(outputDir);
 
             var DLL = System.Reflection.Assembly.LoadFile(Path.Combine(outputDir, Path.GetFileName(output)));
 

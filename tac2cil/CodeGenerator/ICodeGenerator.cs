@@ -5,9 +5,10 @@ using System.Text;
 
 namespace CodeGenerator
 {
-    interface ICodeGenerator
+    interface ICodeGenerator<T>
     {
         Host Host { get; }
-        void GenerateAssemblies(string pathToFolder);
+        ICollection<T> GenerateAssemblies();
+        void WriteAssemblies(string pathToFolder);
     }
 }
