@@ -22,5 +22,10 @@ namespace CodeGenerator
 
             return string.Format("{0}`{1}{2}", basicType.Name, basicType.GenericParameterCount, arguments);
         }
+        public static void AddRange<T>(this ICollection<T> t, IEnumerable<T> x)
+        {
+            foreach (var elem in x)
+                t.Add(elem);
+        }
     }
 }

@@ -66,6 +66,8 @@ namespace Tests
             "Tests.Resources.Inheritance.cs/Test.Program/Test2", // 31
             "Tests.Resources.Inheritance.cs/Test.Program/Test3", // 32
 
+            "Tests.Resources.GenericMethod2.cs/Test.Program/Test0", // 33
+
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -102,7 +104,8 @@ namespace Tests
             null, // 29
             10, // 30
             10, // 31
-            null // 32
+            null, // 32
+            null, // 33
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
@@ -142,7 +145,7 @@ namespace Tests
 
             TestReturnValue(testSeed, parameters, false, false);
         }
-        [Test, Ignore("cci provider is failing")]
+        [Test]
         public void TestCompileDSA()
         {
             Model.Host host = new Model.Host();

@@ -20,9 +20,6 @@ namespace CodeGenerator.CecilCodeGenerator
             get { return host; }
         }
 
-        private IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap = 
-            new Dictionary<Model.Assembly, AssemblyDefinition>();
-        
         private Mono.Cecil.MethodDefinition GetMainDefinitionInCecilModule(ModuleDefinition module)
         {
             var mainQuery = from t in module.Types
@@ -47,8 +44,12 @@ namespace CodeGenerator.CecilCodeGenerator
             return main;
         }
 
-        public ICollection<AssemblyDefinition> GenerateAssemblies()
+
+        private void CreateEmptyAssemblies(DefinitionMapping definitionMapping)
         {
+            IDictionary<Model.Assembly, AssemblyDefinition> map
+                = definitionMapping.AssembliesMap;
+
             foreach (var analysisNetAssembly in host.Assemblies)
             {
                 string moduleName = analysisNetAssembly.Name;
@@ -60,9 +61,20 @@ namespace CodeGenerator.CecilCodeGenerator
                 AssemblyDefinition cecilAssembly = AssemblyDefinition.CreateAssembly(
                     new AssemblyNameDefinition(analysisNetAssembly.Name, new Version(1, 0, 0, 0)), moduleName, moduleKind);
 
-                assembliesMap[analysisNetAssembly] = cecilAssembly;
+                map[analysisNetAssembly] = cecilAssembly;
             }
+        }
+        public ICollection<AssemblyDefinition> GenerateAssemblies()
+        {
+            DefinitionMapping definitionMapping = new DefinitionMapping();
+            CreateEmptyAssemblies(definitionMapping);
+            CreateEmptyDefinitions(definitionMapping);
+            CompleteDefinitions(definitionMapping);
 
+            return definitionMapping.AssembliesMap.Values;
+
+            /*
+            IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap = new Dictionary<Model.Assembly, AssemblyDefinition>();
             foreach (var keyval in assembliesMap)
             {
                 var cecilAssembly = keyval.Value;
@@ -81,7 +93,84 @@ namespace CodeGenerator.CecilCodeGenerator
                 module.EntryPoint = GetMainDefinitionInCecilModule(module);
             }
 
-            return assembliesMap.Values;
+            return assembliesMap.Values;*/
+        }
+
+        // First we define empty definitions for types and methods (with their generic parameters)
+        // In this way, the overall process for generating type/method references is simplified
+        // We can directly return the definition as a reference.
+        // One possible drawback is that the reference points to something that is not fully created.
+        private void CreateEmptyDefinitions(DefinitionMapping definitionMapping)
+        {
+            var assembliesMap = definitionMapping.AssembliesMap;
+            foreach (var keyval in assembliesMap)
+            {
+                var cecilAssembly = keyval.Value;
+                var analysisNetAssembly = keyval.Key;
+
+                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
+                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
+
+                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
+                {
+                    Mono.Cecil.TypeDefinition emptyType = definitionGen.CreateEmptyTypeDefinition(analysisNetType);
+                    cecilAssembly.MainModule.Types.Add(emptyType);
+
+                    foreach (var analysisNetMethod in analysisNetType.Methods)
+                    {
+                        var emptyMethod = definitionGen.CreateEmptyMethodDefinition(analysisNetMethod);
+                        emptyType.Methods.Add(emptyMethod);
+                    }
+                }
+            }
+
+            CreateFieldDefinitions(definitionMapping);
+        }
+
+        private void CreateFieldDefinitions(DefinitionMapping definitionMapping)
+        {
+            var assembliesMap = definitionMapping.AssembliesMap;
+            foreach (var keyval in assembliesMap)
+            {
+                var cecilAssembly = keyval.Value;
+                var analysisNetAssembly = keyval.Key;
+
+                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
+                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
+
+                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
+                {
+                    var cecilType = definitionMapping.TypesMap[analysisNetType];
+
+                    foreach (var analysisNetField in analysisNetType.Fields)
+                    {
+                        var cecilField = definitionGen.CreateFieldDefinition(analysisNetField);
+                        definitionMapping.FieldsMap[analysisNetField] = cecilField;
+                        cecilType.Fields.Add(cecilField);
+                    }
+                }
+            }
+        }
+
+        private void CompleteDefinitions(DefinitionMapping definitionMapping)
+        {
+            var assembliesMap = definitionMapping.AssembliesMap;
+            foreach (var keyval in assembliesMap)
+            {
+                var cecilAssembly = keyval.Value;
+                var analysisNetAssembly = keyval.Key;
+
+                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
+                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
+
+                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
+                {
+                    definitionGen.CompleteTypeDefinition(analysisNetType);
+
+                    foreach (var analysisNetMethod in analysisNetType.Methods)
+                        definitionGen.CompleteMethodDefinition(analysisNetMethod);
+                }
+            }
         }
 
         public void WriteAssemblies(string pathToFolder)
