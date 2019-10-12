@@ -145,7 +145,7 @@ namespace Tests
 
             TestReturnValue(testSeed, parameters, false, false);
         }
-        [Test]
+        [Test, Ignore("bug in cci provider")]
         public void TestCompileDSA()
         {
             Model.Host host = new Model.Host();
@@ -169,6 +169,7 @@ namespace Tests
                 TestReturnValueSeeds[24],
                 TestReturnValueSeeds[25],
                 TestReturnValueSeeds[26],
+                TestReturnValueSeeds[33],
             };
 
             if (ignore.Contains(testSeed))

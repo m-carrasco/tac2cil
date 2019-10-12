@@ -6,26 +6,26 @@ namespace CodeGenerator
 {
     public static class Extensions
     {
-        // todo: once analysis-net works correctly regarding generic parameter count and arguments, we could use analysis-net's extension
         public static string MetadataName(this Model.Types.IBasicType basicType)
         {
-            if (basicType.GenericParameterCount == 0)
+            if (basicType.GenericParameterCount == 0 && basicType.GenericArguments.Count == 0)
                 return basicType.Name;
 
-            var arguments = string.Empty;
+            int number = Math.Max(basicType.GenericParameterCount, basicType.GenericArguments.Count);
 
-            if (basicType.GenericArguments.Count > 0)
-            {
-                arguments = string.Join(", ", basicType.GenericArguments);
-                arguments = string.Format("<{0}>", arguments);
-            }
-
-            return string.Format("{0}`{1}{2}", basicType.Name, basicType.GenericParameterCount, arguments);
+            return string.Format("{0}`{1}", basicType.Name, number);
         }
+
         public static void AddRange<T>(this ICollection<T> t, IEnumerable<T> x)
         {
             foreach (var elem in x)
                 t.Add(elem);
+        }
+
+        public static void CreateGenericParameters(this Mono.Cecil.IGenericParameterProvider container, int count)
+        {
+            for (int i = 0; i < count; i++)
+                container.GenericParameters.Add(new Mono.Cecil.GenericParameter(container));
         }
     }
 }

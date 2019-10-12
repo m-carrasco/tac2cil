@@ -45,10 +45,10 @@ namespace CodeGenerator.CecilCodeGenerator
         }
 
 
-        private void CreateEmptyAssemblies(DefinitionMapping definitionMapping)
+        private void CreateEmptyAssemblies(ModelMapping modelMapping)
         {
             IDictionary<Model.Assembly, AssemblyDefinition> map
-                = definitionMapping.AssembliesMap;
+                = modelMapping.AssembliesMap;
 
             foreach (var analysisNetAssembly in host.Assemblies)
             {
@@ -66,113 +66,39 @@ namespace CodeGenerator.CecilCodeGenerator
         }
         public ICollection<AssemblyDefinition> GenerateAssemblies()
         {
-            DefinitionMapping definitionMapping = new DefinitionMapping();
-            CreateEmptyAssemblies(definitionMapping);
-            CreateEmptyDefinitions(definitionMapping);
-            CompleteDefinitions(definitionMapping);
+            ModelMapping modelMapping = new ModelMapping();
+            CreateEmptyAssemblies(modelMapping);
+            CreateDefinitions(modelMapping);
 
-            return definitionMapping.AssembliesMap.Values;
-
-            /*
-            IDictionary<Model.Assembly, AssemblyDefinition> assembliesMap = new Dictionary<Model.Assembly, AssemblyDefinition>();
-            foreach (var keyval in assembliesMap)
-            {
-                var cecilAssembly = keyval.Value;
-                var analysisNetAssembly = keyval.Key;
-
-                ModuleDefinition module = cecilAssembly.MainModule;
-
-                TypeReferenceGenerator typeReferenceGenerator = new TypeReferenceGenerator(module, assembliesMap, host);
-
-                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
-                {
-                    TypeDefinitionGenerator typeDefGen = new TypeDefinitionGenerator(analysisNetType, module, typeReferenceGenerator);
-                    module.Types.Add(typeDefGen.Generate());
-                }
-
-                module.EntryPoint = GetMainDefinitionInCecilModule(module);
-            }
-
-            return assembliesMap.Values;*/
+            return modelMapping.AssembliesMap.Values;
         }
 
-        // First we define empty definitions for types and methods (with their generic parameters)
-        // In this way, the overall process for generating type/method references is simplified
-        // We can directly return the definition as a reference.
-        // One possible drawback is that the reference points to something that is not fully created.
-        private void CreateEmptyDefinitions(DefinitionMapping definitionMapping)
+        private void CreateDefinitions(ModelMapping modelMapping)
         {
-            var assembliesMap = definitionMapping.AssembliesMap;
+            var assembliesMap = modelMapping.AssembliesMap;
             foreach (var keyval in assembliesMap)
             {
                 var cecilAssembly = keyval.Value;
                 var analysisNetAssembly = keyval.Key;
 
-                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
-                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
+                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, modelMapping));
 
                 foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
                 {
-                    Mono.Cecil.TypeDefinition emptyType = definitionGen.CreateEmptyTypeDefinition(analysisNetType);
-                    cecilAssembly.MainModule.Types.Add(emptyType);
+                    TypeGenerator typeGenerator = new TypeGenerator(referenceGen);
+                    var cecilTypeDef = typeGenerator.TypeDefinition(analysisNetType);
+
+                    cecilAssembly.MainModule.Types.Add(cecilTypeDef);
 
                     foreach (var analysisNetMethod in analysisNetType.Methods)
                     {
-                        var emptyMethod = definitionGen.CreateEmptyMethodDefinition(analysisNetMethod);
-                        emptyType.Methods.Add(emptyMethod);
+                        MethodGenerator methodGenerator = new MethodGenerator(referenceGen);
+                        cecilTypeDef.Methods.Add(methodGenerator.MethodDefinition(analysisNetMethod));
                     }
                 }
             }
 
-            CreateFieldDefinitions(definitionMapping);
         }
-
-        private void CreateFieldDefinitions(DefinitionMapping definitionMapping)
-        {
-            var assembliesMap = definitionMapping.AssembliesMap;
-            foreach (var keyval in assembliesMap)
-            {
-                var cecilAssembly = keyval.Value;
-                var analysisNetAssembly = keyval.Key;
-
-                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
-                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
-
-                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
-                {
-                    var cecilType = definitionMapping.TypesMap[analysisNetType];
-
-                    foreach (var analysisNetField in analysisNetType.Fields)
-                    {
-                        var cecilField = definitionGen.CreateFieldDefinition(analysisNetField);
-                        definitionMapping.FieldsMap[analysisNetField] = cecilField;
-                        cecilType.Fields.Add(cecilField);
-                    }
-                }
-            }
-        }
-
-        private void CompleteDefinitions(DefinitionMapping definitionMapping)
-        {
-            var assembliesMap = definitionMapping.AssembliesMap;
-            foreach (var keyval in assembliesMap)
-            {
-                var cecilAssembly = keyval.Value;
-                var analysisNetAssembly = keyval.Key;
-
-                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, definitionMapping));
-                DefinitionGenerator definitionGen = new DefinitionGenerator(referenceGen);
-
-                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
-                {
-                    definitionGen.CompleteTypeDefinition(analysisNetType);
-
-                    foreach (var analysisNetMethod in analysisNetType.Methods)
-                        definitionGen.CompleteMethodDefinition(analysisNetMethod);
-                }
-            }
-        }
-
         public void WriteAssemblies(string pathToFolder)
         {
             var assemblies = GenerateAssemblies();

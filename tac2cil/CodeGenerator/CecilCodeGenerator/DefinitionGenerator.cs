@@ -5,60 +5,6 @@ using AnalysisNet = Model;
 using Cecil = Mono.Cecil;
 namespace CodeGenerator.CecilCodeGenerator
 {
-    class DefinitionGenerator
-    {
-        public DefinitionGenerator(ReferenceGenerator referenceGenerator)
-        {
-            this.ReferenceGenerator = referenceGenerator;
-            this.Context = referenceGenerator.Context;
-        }
-
-        public ReferenceGenerator ReferenceGenerator { get; }
-        public Context Context { get; }
-
-        public Cecil.TypeDefinition CreateEmptyTypeDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
-        {
-            EmptyDefinitionGenerator emptyDefinitionGenerator = new EmptyDefinitionGenerator(Context, ReferenceGenerator);
-            var cecilDefinition = emptyDefinitionGenerator.CreateEmptyTypeDefinition(typeDefinition);
-            Context.DefinitionMapping.TypesMap[typeDefinition] = cecilDefinition;
-            return cecilDefinition;
-        }
-
-        public Cecil.MethodDefinition CreateEmptyMethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
-        {
-            EmptyDefinitionGenerator emptyDefinitionGenerator = new EmptyDefinitionGenerator(Context, ReferenceGenerator);
-            var cecilDefinition = emptyDefinitionGenerator.CreateEmptyMethodDefinition(methodDefinition);
-            Context.DefinitionMapping.MethodsMap[methodDefinition] = cecilDefinition;
-            return cecilDefinition;
-        }
-
-        public void CompleteTypeDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
-        {
-            DefinitionCompleter definitionCompleter = new DefinitionCompleter(ReferenceGenerator);
-            definitionCompleter.Complete(typeDefinition);
-        }
-
-        public void CompleteMethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
-        {
-            DefinitionCompleter definitionCompleter = new DefinitionCompleter(ReferenceGenerator);
-            definitionCompleter.Complete(methodDefinition);
-        }
-
-        // This should be called after types are emptly defined
-        // otherwise TypeReference(fieldDefinition.Type) could fail
-        public Cecil.FieldDefinition CreateFieldDefinition(AnalysisNet.Types.FieldDefinition fieldDefinition)
-        {
-            var fieldAttribute = Cecil.FieldAttributes.Public;
-            if (fieldDefinition.IsStatic)
-                fieldAttribute |= Cecil.FieldAttributes.Static;
-
-            Cecil.TypeReference fieldType = ReferenceGenerator.TypeReference(fieldDefinition.Type);
-            Cecil.FieldDefinition cecilField = new Mono.Cecil.FieldDefinition(fieldDefinition.Name, fieldAttribute, fieldType);
-
-            return cecilField;
-        }
-    }
-
     internal class InstructionGenerator
     {
         public InstructionGenerator(ReferenceGenerator referenceGenerator)
@@ -83,32 +29,35 @@ namespace CodeGenerator.CecilCodeGenerator
             foreach (Mono.Cecil.Cil.Instruction ins in instructions)
                 ilProcessor.Append(ins);
         }
-
     }
-    internal class DefinitionCompleter
+    internal abstract class DefinitionGenerator
     {
-        public DefinitionCompleter(ReferenceGenerator referenceGenerator)
+        public DefinitionGenerator(ReferenceGenerator referenceGenerator)
         {
             this.Context = referenceGenerator.Context;
             this.ReferenceGenerator = referenceGenerator;
         }
+
         public Context Context { get; }
         public ReferenceGenerator ReferenceGenerator { get; }
-
-        public void Complete(AnalysisNet.Types.TypeDefinition typeDefinition)
+        protected void AddConstraintsToGenericParameters(AnalysisNet.Types.IGenericDefinition genericDefinition, Cecil.IGenericParameterProvider genericParameterProvider)
         {
-            Cecil.TypeDefinition cecilTypeDefinition = Context.DefinitionMapping.TypesMap[typeDefinition];
-
-            Cecil.TypeReference baseType = typeDefinition.Base == null ? null : ReferenceGenerator.TypeReference(typeDefinition.Base);
-            cecilTypeDefinition.BaseType = baseType;
-
-            AddConstraintsToGenericParameters(typeDefinition, cecilTypeDefinition);
-            AddInterfaceImplementations(typeDefinition, cecilTypeDefinition);
+            foreach (var analysisNetParameter in genericDefinition.GenericParameters)
+            {
+                var constraints = analysisNetParameter.Constraints.Select(c => new Cecil.GenericParameterConstraint(ReferenceGenerator.TypeReference(c)));
+                genericParameterProvider.GenericParameters.ElementAt(analysisNetParameter.Index).Constraints.AddRange(constraints);
+            }
         }
+    }
 
-        public void Complete(AnalysisNet.Types.MethodDefinition methodDefinition)
+    internal class MethodGenerator : DefinitionGenerator
+    {
+        public MethodGenerator(ReferenceGenerator referenceGenerator) : base(referenceGenerator) { }
+
+        public Cecil.MethodDefinition MethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
         {
-            Cecil.MethodDefinition cecilMethodDefinition = Context.DefinitionMapping.MethodsMap[methodDefinition];
+            Cecil.MethodDefinition cecilMethodDefinition = new Cecil.MethodDefinition(methodDefinition.Name, GenerateMethodAttributes(methodDefinition), Context.CurrentModule.TypeSystem.Void);
+            cecilMethodDefinition.CreateGenericParameters(methodDefinition.GenericParameters.Count);
 
             Cecil.TypeReference returnType = ReferenceGenerator.TypeReference(methodDefinition.ReturnType);
             cecilMethodDefinition.ReturnType = returnType;
@@ -130,6 +79,8 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 CreateParametersWithoutBody(methodDefinition, cecilMethodDefinition);
             }
+
+            return cecilMethodDefinition;
         }
 
         private void CreateParametersWithoutBody(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
@@ -197,91 +148,13 @@ namespace CodeGenerator.CecilCodeGenerator
 
             return variableDefinitions;
         }
-        private void AddConstraintsToGenericParameters(AnalysisNet.Types.IGenericDefinition genericDefinition, Cecil.IGenericParameterProvider genericParameterProvider)
+
+
+        private Cecil.MethodAttributes GetVisibility(AnalysisNet.Types.VisibilityKind visibility)
         {
-            foreach (var analysisNetParameter in genericDefinition.GenericParameters)
-            {
-                var constraints = analysisNetParameter.Constraints.Select(c => new Cecil.GenericParameterConstraint(ReferenceGenerator.TypeReference(c)));
-                genericParameterProvider.GenericParameters.ElementAt(analysisNetParameter.Index).Constraints.AddRange(constraints);
-            }
+            return Cecil.MethodAttributes.Public;
         }
 
-        private void AddInterfaceImplementations(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition t)
-        {
-            foreach (var inter in typeDefinition.Interfaces)
-                t.Interfaces.Add(new Cecil.InterfaceImplementation(ReferenceGenerator.TypeReference(inter)));
-        }
-    }
-    internal class EmptyDefinitionGenerator
-    {
-        public EmptyDefinitionGenerator(Context context, ReferenceGenerator referenceGenerator)
-        {
-            this.Context = context;
-            this.ReferenceGenerator = referenceGenerator;
-        }
-        public Cecil.TypeDefinition CreateEmptyTypeDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
-        {
-            if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Struct)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Enum)
-            {
-                throw new NotImplementedException();
-            }
-            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Interface)
-            {
-                return CreateInterfaceDefinition(typeDefinition);
-            }
-            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Class)
-            {
-                return CreateClassDefinition(typeDefinition);
-            }
-
-            return null;
-        }
-        public Cecil.MethodDefinition CreateEmptyMethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
-        {
-            Cecil.MethodDefinition methodDef = new Mono.Cecil.MethodDefinition(methodDefinition.Name, GenerateMethodAttributes(methodDefinition), Context.CurrentModule.TypeSystem.Void);
-            CreateGenericParameters(methodDefinition, methodDef);
-            return methodDef;
-        }
-        private Cecil.TypeDefinition CreateClassDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
-        {
-            string namespaceName = typeDefinition.ContainingNamespace.FullName;
-            Cecil.TypeAttributes attributes = Mono.Cecil.TypeAttributes.Class | GetVisibility(typeDefinition.Visibility);
-
-            // hack: an abstract class can have no abstract methods
-            // there is no field in the type definition
-            if (typeDefinition.Methods.Any(m => m.IsAbstract))
-                attributes |= Mono.Cecil.TypeAttributes.Abstract;
-
-            var t = new Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(), attributes);
-
-            CreateGenericParameters(typeDefinition, t);
-
-            return t;
-        }
-
-        private Cecil.TypeDefinition CreateInterfaceDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
-        {
-            var cecilDefinition = CreateClassDefinition(typeDefinition);
-            cecilDefinition.Attributes |= Cecil.TypeAttributes.Interface;
-            cecilDefinition.Attributes |= Cecil.TypeAttributes.Abstract;
-            // todo: not sure about this
-            cecilDefinition.Attributes &= ~Cecil.TypeAttributes.Class;
-            return cecilDefinition;
-        }
-
-        private void CreateGenericParameters(AnalysisNet.Types.IGenericDefinition genericDefinition, Cecil.IGenericParameterProvider genericParameterProvider)
-        {
-            foreach (var gp in Enumerable.Repeat(new Cecil.GenericParameter(genericParameterProvider), genericDefinition.GenericParameters.Count))
-                genericParameterProvider.GenericParameters.Add(gp);
-        }
-        private Cecil.TypeAttributes GetVisibility(AnalysisNet.Types.VisibilityKind visibility)
-        {
-            return Cecil.TypeAttributes.Public;
-        }
         private Cecil.MethodAttributes GenerateMethodAttributes(AnalysisNet.Types.MethodDefinition methodDefinition)
         {
             // readme: methods defined in interfaces are flagged as external (cci does it)
@@ -292,7 +165,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 throw new NotImplementedException();
             }
 
-            Cecil.MethodAttributes res = GetMethodVisibility();
+            Cecil.MethodAttributes res = GetVisibility(methodDefinition.Visibility);
 
             if (methodDefinition.IsStatic)
                 res |= Cecil.MethodAttributes.Static;
@@ -312,13 +185,96 @@ namespace CodeGenerator.CecilCodeGenerator
 
             return res;
         }
-
-        private Cecil.MethodAttributes GetMethodVisibility()
+    }
+    internal class TypeGenerator : DefinitionGenerator
+    {
+        public TypeGenerator(ReferenceGenerator referenceGenerator) : base(referenceGenerator)
         {
-            return Cecil.MethodAttributes.Public;
+        }
+        private Cecil.TypeAttributes GetVisibility(AnalysisNet.Types.VisibilityKind visibility)
+        {
+            return Cecil.TypeAttributes.Public;
         }
 
-        public Context Context { get; }
-        public ReferenceGenerator ReferenceGenerator { get; private set; }
+        public Cecil.TypeDefinition TypeDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Struct)
+            {
+                throw new NotImplementedException();
+            }
+            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Enum)
+            {
+                throw new NotImplementedException();
+            }
+            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Interface)
+            {
+                return CreateInterfaceDefinition(typeDefinition);
+            }
+            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Class)
+            {
+                return CreateClassDefinition(typeDefinition);
+            }
+
+            throw new NotImplementedException();
+        }
+
+        private Cecil.TypeDefinition CreateClassDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            string namespaceName = typeDefinition.ContainingNamespace.FullName;
+            Cecil.TypeAttributes attributes = Mono.Cecil.TypeAttributes.Class | GetVisibility(typeDefinition.Visibility);
+
+            // hack: an abstract class can have no abstract methods
+            // there is no field in the type definition
+            if (typeDefinition.Methods.Any(m => m.IsAbstract))
+                attributes |= Mono.Cecil.TypeAttributes.Abstract;
+
+            var t = new Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(), attributes);
+
+            t.CreateGenericParameters(typeDefinition.GenericParameters.Count);
+
+            Cecil.TypeReference baseType = typeDefinition.Base == null ? null : ReferenceGenerator.TypeReference(typeDefinition.Base);
+            t.BaseType = baseType;
+
+            AddConstraintsToGenericParameters(typeDefinition, t);
+            AddInterfaceImplementations(typeDefinition, t);
+            CreateFieldDefinitions(typeDefinition, t);
+
+            return t;
+        }
+
+        private void AddInterfaceImplementations(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition t)
+        {
+            foreach (var inter in typeDefinition.Interfaces)
+                t.Interfaces.Add(new Cecil.InterfaceImplementation(ReferenceGenerator.TypeReference(inter)));
+        }
+
+        private Cecil.TypeDefinition CreateInterfaceDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            var cecilDefinition = CreateClassDefinition(typeDefinition);
+            cecilDefinition.Attributes |= Cecil.TypeAttributes.Interface;
+            cecilDefinition.Attributes |= Cecil.TypeAttributes.Abstract;
+            // todo: not sure about this
+            cecilDefinition.Attributes &= ~Cecil.TypeAttributes.Class;
+            return cecilDefinition;
+        }
+
+        private void CreateFieldDefinitions(AnalysisNet.Types.TypeDefinition analysisNetDef, Cecil.TypeDefinition cecilDef)
+        {
+            foreach (var field in analysisNetDef.Fields)
+                cecilDef.Fields.Add(CreateFieldDefinition(field));
+        }
+
+        private Cecil.FieldDefinition CreateFieldDefinition(AnalysisNet.Types.FieldDefinition fieldDefinition)
+        {
+            var fieldAttribute = Cecil.FieldAttributes.Public;
+            if (fieldDefinition.IsStatic)
+                fieldAttribute |= Cecil.FieldAttributes.Static;
+
+            Cecil.TypeReference fieldType = ReferenceGenerator.TypeReference(fieldDefinition.Type);
+            Cecil.FieldDefinition cecilField = new Mono.Cecil.FieldDefinition(fieldDefinition.Name, fieldAttribute, fieldType);
+
+            return cecilField;
+        }
     }
 }
+

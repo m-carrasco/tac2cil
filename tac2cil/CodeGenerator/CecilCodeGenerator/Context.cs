@@ -7,14 +7,14 @@ namespace CodeGenerator.CecilCodeGenerator
 {
     class Context
     {
-        public Context(Cecil.ModuleDefinition current, DefinitionMapping definitionMapping)
+        public Context(Cecil.ModuleDefinition current, ModelMapping modelMapping)
         {
             this.CurrentModule = current;
-            this.DefinitionMapping = definitionMapping;
+            this.ModelMapping = modelMapping;
         }
 
         public Cecil.ModuleDefinition CurrentModule { get; }
-        public DefinitionMapping DefinitionMapping { get; }
+        public ModelMapping ModelMapping { get; }
 
     }
 }
