@@ -164,6 +164,20 @@ namespace CodeGenerator.CecilCodeGenerator
                 case Model.Bytecode.BasicOperation.EndFinally:
                     op = Mono.Cecil.Cil.OpCodes.Endfinally;
                     break;
+                case Model.Bytecode.BasicOperation.Shl:
+                    op = Mono.Cecil.Cil.OpCodes.Shl;
+                    break;
+                case Model.Bytecode.BasicOperation.Shr:
+                    op = instruction.UnsignedOperands ? Mono.Cecil.Cil.OpCodes.Shr_Un : Mono.Cecil.Cil.OpCodes.Shr;
+                    break;
+                case Model.Bytecode.BasicOperation.Mul:
+                    if (instruction.OverflowCheck && instruction.UnsignedOperands)
+                        op = Mono.Cecil.Cil.OpCodes.Mul_Ovf_Un;
+                    else if (instruction.OverflowCheck)
+                        op = Mono.Cecil.Cil.OpCodes.Mul_Ovf;
+                    else
+                        op = Mono.Cecil.Cil.OpCodes.Mul;
+                    break;
                 default:
                     throw new NotImplementedException();
             }
