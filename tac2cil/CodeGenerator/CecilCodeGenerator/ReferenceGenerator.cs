@@ -1,9 +1,7 @@
 ﻿using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
-using System.Text;
 using AnalysisNet = Model;
 using Cecil = Mono.Cecil;
 
@@ -11,49 +9,95 @@ namespace CodeGenerator.CecilCodeGenerator
 {
     class ReferenceGenerator
     {
+
+        // Maps a position in a generic argument list to a generic parameter
+        // we use this map to prevent infinite recursion, specially with generic methods
+        private class GenericParameterMap : Dictionary<int, Cecil.GenericParameter>
+        {
+        }
+
         public ReferenceGenerator(Context context)
         {
             this.Context = context;
+            this.fieldsCache = context.ModelMapping.FieldsMap;
+            this.typesCache = context.ModelMapping.TypesMap;
+            this.methodsCache = context.ModelMapping.MethodsMap;
+
+            this.genericParamsMap = new Dictionary<AnalysisNet.Types.IGenericReference, GenericParameterMap>();
         }
 
         public Context Context { get; }
 
+        // cache only for performance
+        private readonly IDictionary<AnalysisNet.Types.IFieldReference, Cecil.FieldReference> fieldsCache;
+        private readonly IDictionary<AnalysisNet.Types.IType, Cecil.TypeReference> typesCache;
+        private readonly IDictionary<AnalysisNet.Types.IMethodReference, Cecil.MethodReference> methodsCache;
+
+        // used to prevent infinite recursion
+        private readonly IDictionary<AnalysisNet.Types.IGenericReference, GenericParameterMap> genericParamsMap;
+
+        private void MapGenericParameters(Cecil.IGenericParameterProvider cecilContainer, AnalysisNet.Types.IGenericReference analysisNetContainer)
+        {
+            var map = new GenericParameterMap();
+
+            for (int i=0; i < cecilContainer.GenericParameters.Count; i++)
+            {
+                map[i] = cecilContainer.GenericParameters.ElementAt(i);
+            }
+
+            genericParamsMap[analysisNetContainer] = map;
+        }
+
+        private Cecil.GenericParameter GetGenericParameter(AnalysisNet.Types.IGenericParameterReference analysisNetGP)
+        {
+            if (genericParamsMap.TryGetValue(analysisNetGP.GenericContainer, out GenericParameterMap map))
+                return map[analysisNetGP.Index];
+
+            // populates map
+            if (analysisNetGP.Kind == AnalysisNet.Types.GenericParameterKind.Method)
+                MethodReference(analysisNetGP.GenericContainer as AnalysisNet.Types.IMethodReference);
+            else
+                TypeReference(analysisNetGP.GenericContainer as AnalysisNet.Types.IBasicType);
+
+            map = genericParamsMap[analysisNetGP.GenericContainer];
+            return map[analysisNetGP.Index];
+        }
+
         public Cecil.FieldReference FieldReference(AnalysisNet.Types.IFieldReference fieldReference)
         {
-            var cache = Context.ModelMapping.FieldsMap;
-            if (cache.ContainsKey(fieldReference))
-                return cache[fieldReference];
+            if (fieldsCache.TryGetValue(fieldReference, out Cecil.FieldReference cecilField))
+                return cecilField;
 
             Cecil.TypeReference cecilType = TypeReference(fieldReference.Type);
             Cecil.TypeReference declaringType = TypeReference(fieldReference.ContainingType);
 
-            Cecil.FieldReference cecilField = new Cecil.FieldReference(
+            cecilField = new Cecil.FieldReference(
                 fieldReference.Name,
                 cecilType,
                 declaringType
             );
 
-            cache[fieldReference] = cecilField;
+            fieldsCache[fieldReference] = cecilField;
 
             return cecilField;
         }
 
         public Cecil.MethodReference MethodReference(AnalysisNet.Types.IMethodReference methodReference)
         {
-            var cache = Context.ModelMapping.MethodsMap;
-            if (cache.ContainsKey(methodReference))
-                return cache[methodReference];
+            if (methodsCache.TryGetValue(methodReference, out Cecil.MethodReference cecilMethodReference))
+                return cecilMethodReference;
 
             Cecil.TypeReference dummyReturnType = Context.CurrentModule.TypeSystem.Void;
             Cecil.TypeReference declaringType = TypeReference(methodReference.ContainingType);
 
             string name = methodReference.Name;
-            Cecil.MethodReference cecilMethodReference = new Cecil.MethodReference(name, dummyReturnType, declaringType);
+            cecilMethodReference = new Cecil.MethodReference(name, dummyReturnType, declaringType);
             cecilMethodReference.HasThis = !methodReference.IsStatic;
 
             if (methodReference.GenericParameterCount > 0)
             {
                 cecilMethodReference.CreateGenericParameters(methodReference.GenericParameterCount);
+                MapGenericParameters(cecilMethodReference, methodReference);
                 // should we add constraints?
                 if (methodReference.GenericArguments.Count == 0)
                 {
@@ -70,7 +114,6 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
             }
 
-            cache[methodReference] = cecilMethodReference;
             cecilMethodReference.ReturnType = TypeReference(methodReference.ReturnType);
 
             foreach (var parameter in methodReference.Parameters)
@@ -80,6 +123,8 @@ namespace CodeGenerator.CecilCodeGenerator
             }
 
             cecilMethodReference = Context.CurrentModule.ImportReference(cecilMethodReference);
+            methodsCache[methodReference] = cecilMethodReference;
+
             return cecilMethodReference;
         }
         public Cecil.TypeReference TypeReference(AnalysisNet.Types.IType type)
@@ -121,12 +166,15 @@ namespace CodeGenerator.CecilCodeGenerator
 
         private Cecil.TypeReference TypeReference(AnalysisNet.Types.IBasicType basicType)
         {
-            if (Context.ModelMapping.TypesMap.ContainsKey(basicType))
-                return Context.ModelMapping.TypesMap[basicType];
+            if (typesCache.TryGetValue(basicType, out Cecil.TypeReference cecilTypeReference))
+                return cecilTypeReference;
 
             Cecil.TypeReference platformType = TypeReferenceToPlatformType(basicType);
             if (platformType != null)
+            {
+                typesCache[basicType] = platformType;
                 return platformType;
+            }
 
             string nmspace = basicType.ContainingNamespace;
             string name = basicType.MetadataName();
@@ -135,14 +183,14 @@ namespace CodeGenerator.CecilCodeGenerator
             if (module == null && scope == null)
                 throw new NotImplementedException();
 
-            Cecil.TypeReference cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
+            cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
 
             if (basicType.GenericParameterCount > 0)
             {
                 Cecil.GenericInstanceType instantiated = null;
                 // should we add constraints?
                 cecilTypeReference.CreateGenericParameters(basicType.GenericParameterCount);
-
+                MapGenericParameters(cecilTypeReference, basicType);
                 // call it before instantiating it
                 cecilTypeReference = ImportTypeReference(cecilTypeReference);
 
@@ -156,9 +204,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     instantiated = cecilTypeReference.MakeGenericInstanceType(arguments);
                 }
 
-                // should we cache it before instantiating when there are arguments available?
-                Context.ModelMapping.TypesMap[basicType] = instantiated;
-
                 cecilTypeReference = instantiated;
             }
             else
@@ -169,7 +214,7 @@ namespace CodeGenerator.CecilCodeGenerator
             if (basicType.ContainingType != null)
                 cecilTypeReference.DeclaringType = TypeReference(basicType.ContainingType);
 
-
+            typesCache[basicType] = cecilTypeReference;
             return cecilTypeReference;
         }
 
@@ -225,36 +270,20 @@ namespace CodeGenerator.CecilCodeGenerator
         {
             if (genericParameter.Kind == AnalysisNet.Types.GenericParameterKind.Type)
             {
-                var cache = Context.ModelMapping.TypesMap;
-                if (cache.ContainsKey(genericParameter))
-                    return cache[genericParameter];
+                if (typesCache.TryGetValue(genericParameter, out Cecil.TypeReference cecilParam))
+                    return cecilParam;
 
-                AnalysisNet.Types.IBasicType container = genericParameter.GenericContainer as AnalysisNet.Types.IBasicType;
-                
-                // genericParameter can be !0 and the generic container List<int>, without the fallback to the ElementType
-                // we would return int which is wrong
-                
-                Cecil.GenericInstanceType cecilContainerReference = (cache.ContainsKey(container) ? cache[container] : TypeReference(container)) as Cecil.GenericInstanceType;
-                Cecil.TypeReference cecilParam = cecilContainerReference.GenericArguments.ElementAt(genericParameter.Index);
-                if (!(cecilParam is Cecil.GenericParameter))
-                    cecilParam = cecilContainerReference.ElementType.GenericParameters.ElementAt(genericParameter.Index);
-                cache[genericParameter] = cecilParam;
+                cecilParam = GetGenericParameter(genericParameter);
+                typesCache[genericParameter] = cecilParam;
                 return cecilParam;
             }
             else if (genericParameter.Kind == AnalysisNet.Types.GenericParameterKind.Method)
             {
-                var typeCache = Context.ModelMapping.TypesMap;
-                if (typeCache.ContainsKey(genericParameter))
-                    return typeCache[genericParameter];
+                if (typesCache.TryGetValue(genericParameter, out Cecil.TypeReference cecilParam))
+                    return cecilParam;
 
-                var methodCache = Context.ModelMapping.MethodsMap;
-
-                AnalysisNet.Types.IMethodReference container = genericParameter.GenericContainer as AnalysisNet.Types.IMethodReference;
-                Cecil.GenericInstanceMethod cecilContainerReference = (methodCache.ContainsKey(container) ? methodCache[container] : MethodReference(container)) as Cecil.GenericInstanceMethod;
-                Cecil.TypeReference cecilParam = cecilContainerReference.GenericArguments.ElementAt(genericParameter.Index);
-                if (!(cecilParam is Cecil.GenericParameter))
-                    cecilParam = cecilContainerReference.GetElementMethod().GenericParameters.ElementAt(genericParameter.Index);
-                typeCache[genericParameter] = cecilParam;
+                cecilParam = GetGenericParameter(genericParameter);
+                typesCache[genericParameter] = cecilParam;
                 return cecilParam;
             }
             else

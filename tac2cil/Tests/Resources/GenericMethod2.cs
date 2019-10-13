@@ -12,6 +12,11 @@ namespace Test
         {
             return D.Foo<bool, int>(new B<bool, int>(), false, new C<int>());
         }
+
+        public static Object Test1()
+        {
+            return D.Bar<bool>();
+        }
     }
 
     public class A<T, W> { }
@@ -25,6 +30,16 @@ namespace Test
             where W : IComparable<W>
         {
             return null;
+        }
+
+        public static A<T, W> Fooo<T, W>()
+        {
+            return null;
+        }
+
+        public static Object Bar<W>()
+        {
+            return D.Fooo<W, int>();
         }
     }
 

@@ -67,6 +67,7 @@ namespace Tests
             "Tests.Resources.Inheritance.cs/Test.Program/Test3", // 32
 
             "Tests.Resources.GenericMethod2.cs/Test.Program/Test0", // 33
+            "Tests.Resources.GenericMethod2.cs/Test.Program/Test1", // 34
 
         };
 
@@ -106,6 +107,7 @@ namespace Tests
             10, // 31
             null, // 32
             null, // 33
+            null, // 34
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
@@ -170,6 +172,7 @@ namespace Tests
                 TestReturnValueSeeds[25],
                 TestReturnValueSeeds[26],
                 TestReturnValueSeeds[33],
+                TestReturnValueSeeds[34],
             };
 
             if (ignore.Contains(testSeed))
