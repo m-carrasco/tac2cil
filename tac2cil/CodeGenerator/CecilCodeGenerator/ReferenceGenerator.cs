@@ -185,6 +185,9 @@ namespace CodeGenerator.CecilCodeGenerator
 
             cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
 
+            if (basicType.ContainingType != null)
+                cecilTypeReference.DeclaringType = TypeReference(basicType.ContainingType);
+
             if (basicType.GenericParameterCount > 0)
             {
                 Cecil.GenericInstanceType instantiated = null;
@@ -210,9 +213,6 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 cecilTypeReference = ImportTypeReference(cecilTypeReference);
             }
-
-            if (basicType.ContainingType != null)
-                cecilTypeReference.DeclaringType = TypeReference(basicType.ContainingType);
 
             typesCache[basicType] = cecilTypeReference;
             return cecilTypeReference;
