@@ -161,6 +161,9 @@ namespace CodeGenerator.CecilCodeGenerator
                 case Model.Bytecode.BasicOperation.Throw:
                     op = Mono.Cecil.Cil.OpCodes.Throw;
                     break;
+                case Model.Bytecode.BasicOperation.EndFinally:
+                    op = Mono.Cecil.Cil.OpCodes.Endfinally;
+                    break;
                 default:
                     throw new NotImplementedException();
             }
