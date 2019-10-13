@@ -444,7 +444,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     else
                         return Mono.Cecil.Cil.OpCodes.Ble;
                 case AnalysisNet.Bytecode.BranchOperation.Leave:
-                    throw new NotImplementedException();
+                    return Mono.Cecil.Cil.OpCodes.Leave;
                 case AnalysisNet.Bytecode.BranchOperation.Lt:
                     if (instruction.UnsignedOperands)
                         return Mono.Cecil.Cil.OpCodes.Blt_Un;
