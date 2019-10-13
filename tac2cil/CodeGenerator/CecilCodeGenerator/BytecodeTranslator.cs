@@ -326,7 +326,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     }
                     else if (constant.Value is string asString)
                     {
-                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldc_I4, asString);
+                        cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldstr, asString);
                     }
                     else if (constant.Value == null)
                     {
