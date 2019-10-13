@@ -416,7 +416,31 @@ namespace CodeGenerator.CecilCodeGenerator
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
-        public override void Visit(Model.Bytecode.ConvertInstruction instruction) { throw new NotImplementedException(); }
+        public override void Visit(Model.Bytecode.ConvertInstruction instruction)
+        {
+            Mono.Cecil.Cil.Instruction cilIns;
+
+            if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Box)
+            {
+                cilIns = processor.Create(Cecil.Cil.OpCodes.Box, referenceGenerator.TypeReference(instruction.ConversionType));
+            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Conv)
+            {
+                throw new NotImplementedException();
+            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Cast)
+            {
+                throw new NotImplementedException();
+            }
+            else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Unbox)
+            {
+                throw new NotImplementedException();
+            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.UnboxPtr)
+            {
+                throw new NotImplementedException();
+            } else
+                throw new NotImplementedException();
+
+            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+        }
 
         private Mono.Cecil.Cil.OpCode GetCilBranchOpcode(Model.Bytecode.BranchInstruction instruction)
         {
