@@ -43,8 +43,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
             return main;
         }
-
-
         private void CreateEmptyAssemblies(ModelMapping modelMapping)
         {
             IDictionary<Model.Assembly, AssemblyDefinition> map
@@ -83,12 +81,17 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, modelMapping));
 
-                foreach (var analysisNetType in analysisNetAssembly.RootNamespace.GetAllTypes())
+                // TraverseTypes returns every nested type in A before returning A
+                // this is assumed by the TypeGenerator and MethodGenerator
+                foreach (var analysisNetType in analysisNetAssembly.TraverseTypes())
                 {
                     TypeGenerator typeGenerator = new TypeGenerator(referenceGen);
                     var cecilTypeDef = typeGenerator.TypeDefinition(analysisNetType);
 
-                    cecilAssembly.MainModule.Types.Add(cecilTypeDef);
+                    // nested types are not added directly to the main module
+                    // instead they are added to their enclosing type (that's the way cecil works)
+                    if (cecilTypeDef.DeclaringType == null)
+                        cecilAssembly.MainModule.Types.Add(cecilTypeDef);
 
                     foreach (var analysisNetMethod in analysisNetType.Methods)
                     {
@@ -97,7 +100,6 @@ namespace CodeGenerator.CecilCodeGenerator
                     }
                 }
             }
-
         }
         public void WriteAssemblies(string pathToFolder)
         {
