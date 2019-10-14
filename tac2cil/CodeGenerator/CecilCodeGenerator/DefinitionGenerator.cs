@@ -92,7 +92,10 @@ namespace CodeGenerator.CecilCodeGenerator
 
                 var paramDef = new Cecil.ParameterDefinition(ReferenceGenerator.TypeReference(methodParameter.Type));
                 if (methodParameter.DefaultValue != null)
+                {
                     paramDef.Constant = methodParameter.DefaultValue.Value;
+                    paramDef.HasDefault = true;
+                }
 
                 methodDef.Parameters.Add(paramDef);
             }
@@ -112,7 +115,10 @@ namespace CodeGenerator.CecilCodeGenerator
                 var paramDef = new Cecil.ParameterDefinition(ReferenceGenerator.TypeReference(localVariable.Type));
                 var extractedConstant = GetDefaultValueFromBodyParamIndex(methodDefinition, i);
                 if (extractedConstant != null)
+                {
                     paramDef.Constant = extractedConstant;
+                    paramDef.HasDefault = true;
+                }
 
                 methodDef.Parameters.Add(paramDef);
                 parameterDefinitions[localVariable] = paramDef;
