@@ -56,16 +56,19 @@ namespace CodeGenerator.CecilCodeGenerator
 
         public Cecil.MethodDefinition MethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
         {
-            Cecil.MethodDefinition cecilMethodDefinition = new Cecil.MethodDefinition(methodDefinition.Name, GenerateMethodAttributes(methodDefinition), Context.CurrentModule.TypeSystem.Void);
+            Cecil.MethodDefinition cecilMethodDefinition = new Cecil.MethodDefinition(methodDefinition.Name, 0, Context.CurrentModule.TypeSystem.Void);
+            GenerateMethodAttributes(methodDefinition, cecilMethodDefinition);
             cecilMethodDefinition.CreateGenericParameters(methodDefinition.GenericParameters.Count);
-
+            
             Cecil.TypeReference returnType = ReferenceGenerator.TypeReference(methodDefinition.ReturnType);
             cecilMethodDefinition.ReturnType = returnType;
-
             AddConstraintsToGenericParameters(methodDefinition, cecilMethodDefinition);
 
-            Cecil.TypeDefinition containingType = ReferenceGenerator.TypeReference(methodDefinition.ContainingType).Resolve();
+            var typeRef = ReferenceGenerator.TypeReference(methodDefinition.ContainingType);
+            Cecil.TypeDefinition containingType = typeRef.Resolve();
             cecilMethodDefinition.DeclaringType = containingType as Cecil.TypeDefinition;
+
+            SetOverrides(methodDefinition, cecilMethodDefinition);
 
             if (methodDefinition.HasBody)
             {
@@ -81,6 +84,13 @@ namespace CodeGenerator.CecilCodeGenerator
             }
 
             return cecilMethodDefinition;
+        }
+
+        private void SetOverrides(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
+        {
+            var impls = methodDefinition.ContainingType.ExplicitOverrides;
+            var matchedImpls = impls.Where(impl => methodDefinition.MatchReference(impl.ImplementingMethod));
+            methodDef.Overrides.AddRange(matchedImpls.Select(impl => ReferenceGenerator.MethodReference(impl.ImplementedMethod)));
         }
 
         private void CreateParametersWithoutBody(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
@@ -161,7 +171,7 @@ namespace CodeGenerator.CecilCodeGenerator
             return Cecil.MethodAttributes.Public;
         }
 
-        private Cecil.MethodAttributes GenerateMethodAttributes(AnalysisNet.Types.MethodDefinition methodDefinition)
+        private void GenerateMethodAttributes(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition cecilMethodDefinition)
         {
             // readme: methods defined in interfaces are flagged as external (cci does it)
             // even if the assembly in which they are defined is loaded. The same happens with abstract methods.
@@ -171,25 +181,39 @@ namespace CodeGenerator.CecilCodeGenerator
                 throw new NotImplementedException();
             }
 
-            Cecil.MethodAttributes res = GetVisibility(methodDefinition.Visibility);
+            cecilMethodDefinition.IsPublic = true;
 
             if (methodDefinition.IsStatic)
-                res |= Cecil.MethodAttributes.Static;
+            {
+                cecilMethodDefinition.IsStatic = true;
+                cecilMethodDefinition.HasThis = false;
+            }
+            else
+                cecilMethodDefinition.HasThis = true;
 
             if (methodDefinition.IsAbstract)
-                res |= Cecil.MethodAttributes.Abstract;
+                cecilMethodDefinition.IsAbstract = true;
 
             if (methodDefinition.IsVirtual)
-                res |= Cecil.MethodAttributes.Virtual;
+            {
+                cecilMethodDefinition.IsVirtual = true;
+                cecilMethodDefinition.IsHideBySig = true;
+
+                if (methodDefinition.IsOverrider)
+                    cecilMethodDefinition.IsReuseSlot = true;
+                else
+                    cecilMethodDefinition.IsNewSlot = true;
+            }
+
+            if (methodDefinition.IsFinal)
+                cecilMethodDefinition.IsFinal = true;
 
             if (methodDefinition.IsConstructor)
             {
-                res |= Cecil.MethodAttributes.HideBySig;
-                res |= Cecil.MethodAttributes.SpecialName;
-                res |= Cecil.MethodAttributes.RTSpecialName;
+                cecilMethodDefinition.IsHideBySig = true;
+                cecilMethodDefinition.IsSpecialName = true;
+                cecilMethodDefinition.IsRuntimeSpecialName = true;
             }
-
-            return res;
         }
     }
     internal class TypeGenerator : DefinitionGenerator
@@ -224,27 +248,49 @@ namespace CodeGenerator.CecilCodeGenerator
             throw new NotImplementedException();
         }
 
-        private Cecil.TypeDefinition CreateClassDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        private void SetAttributes(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
         {
-            string namespaceName = typeDefinition.ContainingNamespace.FullName;
-            Cecil.TypeAttributes attributes = Mono.Cecil.TypeAttributes.Class | GetVisibility(typeDefinition.Visibility);
-
             // hack: an abstract class can have no abstract methods
             // there is no field in the type definition
             if (typeDefinition.Methods.Any(m => m.IsAbstract))
-                attributes |= Mono.Cecil.TypeAttributes.Abstract;
+                cecilDef.IsAbstract = true;
 
-            var t = new Cecil.TypeDefinition(namespaceName, typeDefinition.MetadataName(), attributes);
+            if (typeDefinition.ContainingType != null)
+                cecilDef.IsNestedPublic = true;
+            else
+                cecilDef.IsPublic = true;
+        }
+        private void SetDeclaringType(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
+        {
+            Cecil.TypeReference declaringTypeRef = typeDefinition.ContainingType == null ? null : ReferenceGenerator.TypeReference(typeDefinition.ContainingType);
+            if (declaringTypeRef != null)
+            {
+                Cecil.TypeDefinition declaringType = declaringTypeRef.Resolve();
+                declaringType.NestedTypes.Add(cecilDef);
+                cecilDef.DeclaringType = declaringType;
+            }
+        }
+        private void SetBaseType(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
+        {
+            Cecil.TypeReference baseType = typeDefinition.Base == null ? null : ReferenceGenerator.TypeReference(typeDefinition.Base);
+            cecilDef.BaseType = baseType;
+        }
+        private Cecil.TypeDefinition CreateClassDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            string namespaceName = typeDefinition.ContainingNamespace.FullName;
+            string name = typeDefinition.MetadataName();
 
+            var t = new Cecil.TypeDefinition(namespaceName, name, Cecil.TypeAttributes.Class);
+
+            SetAttributes(typeDefinition, t);
             t.CreateGenericParameters(typeDefinition.GenericParameters.Count);
 
-            Cecil.TypeReference baseType = typeDefinition.Base == null ? null : ReferenceGenerator.TypeReference(typeDefinition.Base);
-            t.BaseType = baseType;
+            SetBaseType(typeDefinition, t);
+            SetDeclaringType(typeDefinition, t);
 
             AddConstraintsToGenericParameters(typeDefinition, t);
             AddInterfaceImplementations(typeDefinition, t);
             CreateFieldDefinitions(typeDefinition, t);
-
             return t;
         }
 
