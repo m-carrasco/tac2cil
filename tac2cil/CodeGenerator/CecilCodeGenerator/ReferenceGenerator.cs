@@ -231,6 +231,9 @@ namespace CodeGenerator.CecilCodeGenerator
             if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
                 return Context.CurrentModule.TypeSystem.CoreLibrary;
 
+            if (basicType.ContainingAssembly.Name.Equals("System.Core"))
+                return new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+            
             return null;
         }
 
