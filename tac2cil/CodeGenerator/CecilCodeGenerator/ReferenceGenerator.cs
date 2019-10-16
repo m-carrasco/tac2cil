@@ -232,7 +232,13 @@ namespace CodeGenerator.CecilCodeGenerator
                 return Context.CurrentModule.TypeSystem.CoreLibrary;
 
             if (basicType.ContainingAssembly.Name.Equals("System.Core"))
-                return new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+            {
+                //var enumerable = Context.CurrentModule.ImportReference(typeof(Enumerable));
+                //var r = enumerable.Module.AssemblyReferences.Where(assembly => assembly.Name.Equals("System.Core")).First();
+                // in order to fix errors in PEVerify we need to provide the public key
+                var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+                return a;
+            }
             
             return null;
         }
