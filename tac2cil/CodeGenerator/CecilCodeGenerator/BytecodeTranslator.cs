@@ -541,7 +541,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, arrayCtor);
             }
             else
-                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType);
+                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType.GetElementType());
 
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
