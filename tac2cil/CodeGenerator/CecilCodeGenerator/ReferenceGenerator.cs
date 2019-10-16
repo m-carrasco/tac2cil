@@ -233,10 +233,8 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (basicType.ContainingAssembly.Name.Equals("System.Core"))
             {
-                //var enumerable = Context.CurrentModule.ImportReference(typeof(Enumerable));
-                //var r = enumerable.Module.AssemblyReferences.Where(assembly => assembly.Name.Equals("System.Core")).First();
-                // in order to fix errors in PEVerify we need to provide the public key
                 var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+                a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
                 return a;
             }
             
