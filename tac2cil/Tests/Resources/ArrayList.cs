@@ -10,7 +10,7 @@ namespace Test
 
     class Program
     {
-        public static int Test0()
+        public static IEnumerable<int> Test0()
         {
             var list = new ArrayList<int>();
 
@@ -31,7 +31,221 @@ namespace Test
                 trueCount++;
             }
 
-            return list.Count;
+            return list;
+        }
+
+        public static IEnumerable<int> Test1()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            //if (list.Count != itemCount) Assert.Fail();
+
+            var list2 = new ArrayList<int>();
+
+            list2.AddRange(list);
+
+            int trueCount = 0;
+            int previousItem = int.MinValue;
+
+            foreach (var item in list2)
+            {
+                //if (previousItem > item) Assert.Fail();
+                previousItem = item;
+                trueCount++;
+            }
+
+            return list2;
+            //Assert.IsTrue(list.Count == itemCount
+            //                && list2.Count == itemCount
+            //                && list2.Count == trueCount);
+        }
+
+        public static IEnumerable<int> Test2()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            for (int i = 0; i < itemCount - 1; i++)
+            {
+                list.Remove(i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test3()
+        {
+            var list = new ArrayList<int>(0);
+
+            int itemCount = 100;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test4()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Remove(i);
+            }
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test5()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            list.RemoveRange(0, itemCount - 1);
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test6()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Insert(0, i);
+            }
+
+            var list2 = new ArrayList<int>(list.Reverse());
+
+            return list2;
+        }
+
+        public static IEnumerable<int> Test7()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            for (int i = 1; i < itemCount; i++)
+            {
+                list.RemoveAt(0);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test8()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+                list.Insert(0, i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test9()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Remove(i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test10()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            list.Clear();
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            return list;
+        }
+
+        public static IEnumerable<int> Test11()
+        {
+            var list = new ArrayList<int>();
+
+            int itemCount = 1000;
+
+            for (int i = 0; i < itemCount; i++)
+            {
+                list.Add(i);
+            }
+
+            var list2 = new ArrayList<int>(list);
+
+            list.InsertRange(itemCount / 2, list2);
+
+            return list;
         }
     }
 

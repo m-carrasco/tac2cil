@@ -71,6 +71,17 @@ namespace Tests
 
             "Tests.Resources.ArrayList.cs/Test.Program/Test0", // 35
             "Tests.Resources.NestedGenerics.cs/Test.Program/Test0", // 36
+            "Tests.Resources.ArrayList.cs/Test.Program/Test1", // 37
+            "Tests.Resources.ArrayList.cs/Test.Program/Test2", // 38
+            "Tests.Resources.ArrayList.cs/Test.Program/Test3", // 39
+            "Tests.Resources.ArrayList.cs/Test.Program/Test4", // 40
+            "Tests.Resources.ArrayList.cs/Test.Program/Test5", // 41
+            "Tests.Resources.ArrayList.cs/Test.Program/Test6", // 42
+            "Tests.Resources.ArrayList.cs/Test.Program/Test7", // 43
+            "Tests.Resources.ArrayList.cs/Test.Program/Test8", // 44
+            "Tests.Resources.ArrayList.cs/Test.Program/Test9", // 45
+            "Tests.Resources.ArrayList.cs/Test.Program/Test10", // 46
+            "Tests.Resources.ArrayList.cs/Test.Program/Test11", // 47
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -112,6 +123,17 @@ namespace Tests
             null, // 34
             null, // 35
             null, // 36
+            null, // 37
+            null, // 38
+            null, // 39
+            null, // 40
+            null, // 41
+            null, // 42
+            null, // 43
+            null, // 44
+            null, // 45
+            null, // 46
+            null, // 47
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
