@@ -73,6 +73,7 @@ namespace CodeGenerator.CecilCodeGenerator
             if (methodDefinition.HasBody)
             {
                 cecilMethodDefinition.Body.MaxStackSize = methodDefinition.Body.MaxStack;
+                cecilMethodDefinition.Body.InitLocals = methodDefinition.Body.LocalVariables.Count > 0;
                 IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions = CreateLocalVariables(methodDefinition, cecilMethodDefinition);
                 IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions = CreateParametersWithBody(methodDefinition, cecilMethodDefinition);
                 InstructionGenerator instructionGenerator = new InstructionGenerator(ReferenceGenerator);
