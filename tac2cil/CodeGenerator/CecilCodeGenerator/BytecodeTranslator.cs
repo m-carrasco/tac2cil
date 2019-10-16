@@ -162,7 +162,8 @@ namespace CodeGenerator.CecilCodeGenerator
                     op = Mono.Cecil.Cil.OpCodes.Throw;
                     break;
                 case Model.Bytecode.BasicOperation.EndFinally:
-                    op = Mono.Cecil.Cil.OpCodes.Endfinally;
+                    // we don't support exceptions yet
+                    op = Mono.Cecil.Cil.OpCodes.Nop;
                     break;
                 case Model.Bytecode.BasicOperation.Shl:
                     op = Mono.Cecil.Cil.OpCodes.Shl;
