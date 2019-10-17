@@ -8,15 +8,19 @@ namespace CodeGenerator
     {
         public static string MetadataName(this Model.Types.IBasicType basicType)
         {
-            if (basicType.Name.Contains("GetEnumerator"))
+            int genericParameters = basicType.GenericParameterCount;
+
+            // nested types
+            if (basicType.ContainingType != null)
+                genericParameters -= basicType.ContainingType.GenericParameterCount;
+
+            if (genericParameters < 0)
+                throw new Exception("calculated generic parameter count cannot be negative.");
+
+            if (genericParameters == 0)
                 return basicType.Name;
 
-            if (basicType.GenericParameterCount == 0 && basicType.GenericArguments.Count == 0)
-                return basicType.Name;
-
-            int number = Math.Max(basicType.GenericParameterCount, basicType.GenericArguments.Count);
-
-            return string.Format("{0}`{1}", basicType.Name, number);
+            return string.Format("{0}`{1}", basicType.Name, genericParameters);
         }
 
         public static void AddRange<T>(this ICollection<T> t, IEnumerable<T> x)
