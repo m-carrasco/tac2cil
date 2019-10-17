@@ -436,7 +436,11 @@ namespace CodeGenerator.CecilCodeGenerator
             Mono.Cecil.Cil.Instruction cilIns;
             Cecil.FieldReference fieldReference = referenceGenerator.FieldReference(instruction.Field);
 
-            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
+            if (!instruction.Field.IsStatic)
+                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
+            else
+                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stsfld, fieldReference);
+
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
