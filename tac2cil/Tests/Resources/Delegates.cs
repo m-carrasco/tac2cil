@@ -21,10 +21,17 @@ namespace Test
 
             return f(10);
         }
+
+        public static int Test2()
+        {
+            AddWeights<int> f = (num, num1) => num * num1;
+
+            return f(10, 10);
+        }
     }
 
-    //public delegate TWeight AddWeights<TWeight>(TWeight a, TWeight b)
-    //where TWeight : IComparable<TWeight>;
+    public delegate TWeight AddWeights<TWeight>(TWeight a, TWeight b)
+        where TWeight : IComparable<TWeight>;
 
     public delegate int DelegateInt(int i);
 

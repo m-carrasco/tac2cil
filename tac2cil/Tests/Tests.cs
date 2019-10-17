@@ -85,6 +85,7 @@ namespace Tests
 
             "Tests.Resources.Delegates.cs/Test.Program/Test0", // 48
             "Tests.Resources.Delegates.cs/Test.Program/Test1", // 49
+            "Tests.Resources.Delegates.cs/Test.Program/Test2", // 50
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -139,6 +140,7 @@ namespace Tests
             null, // 47
             null, // 48
             null, // 49
+            null, // 50
         };
 
         private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
