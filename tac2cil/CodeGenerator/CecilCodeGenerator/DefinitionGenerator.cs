@@ -201,7 +201,9 @@ namespace CodeGenerator.CecilCodeGenerator
             if (methodDefinition.IsFinal)
                 cecilMethodDefinition.IsFinal = true;
 
-            if (methodDefinition.IsConstructor)
+            // analysis-net does not flag static constructors
+            bool isStaticCtor = methodDefinition.Name.Equals(".cctor") && methodDefinition.IsStatic;
+            if (methodDefinition.IsConstructor || isStaticCtor)
             {
                 cecilMethodDefinition.IsHideBySig = true;
                 cecilMethodDefinition.IsSpecialName = true;
