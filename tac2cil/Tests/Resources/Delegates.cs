@@ -14,6 +14,13 @@ namespace Test
             DelegateInt delegateInt = t.Identity;
             return delegateInt(10);
         }
+
+        public static int Test1()
+        {
+            Func<int, int> f = num => num * 5;
+
+            return f(10);
+        }
     }
 
     //public delegate TWeight AddWeights<TWeight>(TWeight a, TWeight b)
