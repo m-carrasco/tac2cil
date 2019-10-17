@@ -233,9 +233,12 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (basicType.ContainingAssembly.Name.Equals("System.Core"))
             {
-                var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
-                a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
-                return a;
+                var enumerable = Context.CurrentModule.ImportReference(typeof(Enumerable));
+                var r = enumerable.Module.AssemblyReferences.Where(assembly => assembly.Name.Equals("System.Core")).First();
+                return r;
+                //var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+                //a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
+                //return a;
             }
             
             return null;
