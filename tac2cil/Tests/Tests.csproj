@@ -98,6 +98,7 @@
     <EmbeddedResource Include="Resources\GenericMethod2.cs" />
     <EmbeddedResource Include="Resources\ArrayList.cs" />
     <EmbeddedResource Include="Resources\NestedGenerics.cs" />
+    <EmbeddedResource Include="Resources\Delegates.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />

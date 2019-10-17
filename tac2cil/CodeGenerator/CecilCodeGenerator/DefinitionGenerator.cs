@@ -174,14 +174,6 @@ namespace CodeGenerator.CecilCodeGenerator
 
         private void GenerateMethodAttributes(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition cecilMethodDefinition)
         {
-            // readme: methods defined in interfaces are flagged as external (cci does it)
-            // even if the assembly in which they are defined is loaded. The same happens with abstract methods.
-            if (methodDefinition.IsExternal &&
-                methodDefinition.ContainingType.Kind != Model.Types.TypeDefinitionKind.Interface && !methodDefinition.IsAbstract)
-            {
-                throw new NotImplementedException();
-            }
-
             cecilMethodDefinition.IsPublic = true;
 
             if (methodDefinition.IsStatic)
@@ -215,6 +207,9 @@ namespace CodeGenerator.CecilCodeGenerator
                 cecilMethodDefinition.IsSpecialName = true;
                 cecilMethodDefinition.IsRuntimeSpecialName = true;
             }
+
+            if (methodDefinition.ContainingType.Kind == AnalysisNet.Types.TypeDefinitionKind.Delegate)
+                cecilMethodDefinition.IsRuntime = true;
         }
     }
     internal class TypeGenerator : DefinitionGenerator
@@ -245,10 +240,20 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 return CreateClassDefinition(typeDefinition);
             }
+            else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Delegate)
+            {
+                return CreateDelegateDefinition(typeDefinition);
+            }
 
             throw new NotImplementedException();
         }
 
+        private Cecil.TypeDefinition CreateDelegateDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            var definition = CreateClassDefinition(typeDefinition);
+            definition.IsSealed = true;
+            return definition;
+        }
         private void SetAttributes(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
         {
             // hack: an abstract class can have no abstract methods

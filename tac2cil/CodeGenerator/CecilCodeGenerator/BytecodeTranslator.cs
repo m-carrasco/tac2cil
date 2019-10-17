@@ -410,7 +410,16 @@ namespace CodeGenerator.CecilCodeGenerator
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
-        public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) { throw new NotImplementedException(); }
+        public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) {
+
+            var op = Cecil.Cil.OpCodes.Ldftn;
+
+            if (instruction.Operation == AnalysisNet.Bytecode.LoadMethodAddressOperation.Virtual)
+                op = Cecil.Cil.OpCodes.Ldvirtftn;
+
+            var cilIns = processor.Create(op, referenceGenerator.MethodReference(instruction.Method));
+            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+        }
         public override void Visit(Model.Bytecode.StoreInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction cilIns;
