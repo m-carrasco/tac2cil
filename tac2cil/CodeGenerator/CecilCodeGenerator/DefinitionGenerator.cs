@@ -70,18 +70,15 @@ namespace CodeGenerator.CecilCodeGenerator
 
             SetOverrides(methodDefinition, cecilMethodDefinition);
 
+            var parameterDefinitions = CreateParameters(methodDefinition, cecilMethodDefinition);
+
             if (methodDefinition.HasBody)
             {
                 cecilMethodDefinition.Body.MaxStackSize = methodDefinition.Body.MaxStack;
                 cecilMethodDefinition.Body.InitLocals = methodDefinition.Body.LocalVariables.Count > 0;
                 IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions = CreateLocalVariables(methodDefinition, cecilMethodDefinition);
-                IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions = CreateParametersWithBody(methodDefinition, cecilMethodDefinition);
                 InstructionGenerator instructionGenerator = new InstructionGenerator(ReferenceGenerator);
                 instructionGenerator.CreateInstructions(methodDefinition, cecilMethodDefinition, variableDefinitions, parameterDefinitions);
-            }
-            else
-            {
-                CreateParametersWithoutBody(methodDefinition, cecilMethodDefinition);
             }
 
             return cecilMethodDefinition;
@@ -94,12 +91,15 @@ namespace CodeGenerator.CecilCodeGenerator
             methodDef.Overrides.AddRange(matchedImpls.Select(impl => ReferenceGenerator.MethodReference(impl.ImplementedMethod)));
         }
 
-        private void CreateParametersWithoutBody(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
+        private IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> CreateParameters(AnalysisNet.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
         {
-            foreach (var methodParameter in methodDefinition.Parameters)
+            IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions = new Dictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition>();
+
+            for (int idx = 0; idx < methodDefinition.Parameters.Count; idx++)
             {
-                if (methodParameter.Name.Equals("this"))
-                    continue;
+                var methodParameter = methodDefinition.Parameters.ElementAt(idx);
+                //if (methodParameter.Name.Equals("this"))
+                //    continue;
 
                 var paramDef = new Cecil.ParameterDefinition(ReferenceGenerator.TypeReference(methodParameter.Type));
                 if (methodParameter.DefaultValue != null)
@@ -109,49 +109,19 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
 
                 methodDef.Parameters.Add(paramDef);
-            }
-        }
-        private IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> CreateParametersWithBody(AnalysisNet.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
-        {
-            IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions = new Dictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition>();
-            for (int i = 0; i < methodDefinition.Body.Parameters.Count; i++)
-            {
-                AnalysisNet.ThreeAddressCode.Values.IVariable localVariable = methodDefinition.Body.Parameters[i];
-                if (localVariable.Name == "this")
-                {
-                    parameterDefinitions[localVariable] = methodDef.Body.ThisParameter;
-                    continue;
-                }
 
-                var paramDef = new Cecil.ParameterDefinition(ReferenceGenerator.TypeReference(localVariable.Type));
-                var extractedConstant = GetDefaultValueFromBodyParamIndex(methodDefinition, i);
-                if (extractedConstant != null)
-                {
-                    paramDef.Constant = extractedConstant;
-                    paramDef.HasDefault = true;
-                }
+                // map body parameters to cecil parameters
+                if (methodDefinition.HasBody && methodDefinition.Body.Parameters.Count > 0) {
 
-                methodDef.Parameters.Add(paramDef);
-                parameterDefinitions[localVariable] = paramDef;
+                    // body parameters contain 'this' while analysis-net's parameters do not
+                    int localIdx = (methodDefinition.IsStatic ? 0 : 1) + idx;
+                    var localVariable = methodDefinition.Body.Parameters.ElementAt(localIdx);
+                    parameterDefinitions[localVariable] = paramDef;
+                }
             }
+
             return parameterDefinitions;
         }
-        private Object GetDefaultValueFromBodyParamIndex(AnalysisNet.Types.MethodDefinition methodDefinition, int bodyParamIndex)
-        {
-            // body parameters contains 'this' while signature parameteres do not.
-
-            int idx = bodyParamIndex;
-            if (!methodDefinition.IsStatic)
-                idx--;
-
-            var defaultValue = methodDefinition.Parameters.ElementAt(idx).DefaultValue;
-
-            if (defaultValue != null)
-                return defaultValue.Value;
-
-            return null;
-        }
-
         private IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> CreateLocalVariables(Model.Types.MethodDefinition methodDefinition, Mono.Cecil.MethodDefinition methodDef)
         {
             IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions = new Dictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition>();
