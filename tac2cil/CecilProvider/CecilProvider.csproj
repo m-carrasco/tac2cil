@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\analysis-net\Model\Model.csproj" />
+    <ProjectReference Include="..\..\cecil\Mono.Cecil.csproj" />
+    <ProjectReference Include="..\..\cecil\rocks\Mono.Cecil.Rocks.csproj" />
+  </ItemGroup>
+
+</Project>
