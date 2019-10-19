@@ -240,7 +240,14 @@ namespace CodeGenerator.CecilCodeGenerator
                 a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
                 return a;
             }
-            
+
+            if (basicType.ContainingAssembly.Name.Equals("System"))
+            {
+                var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
+                //a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
+                return a;
+            }
+
             return null;
         }
 
