@@ -47,6 +47,12 @@ namespace CecilProvider
         // if cecilType is a nested type, we guarantee that we have already visited its declaring type
         private void ExtractTypeDefinition(Cecil.TypeDefinition cecilType, AnalysisNet.Assembly assembly)
         {
+            // afaik it is not necessary to generate this class
+            // for instance cci does not even load it although cecil does 
+            if (cecilType.Name.Equals("<Module>") &&
+                cecilType.BaseType == null)
+                return;
+
             TypeExtractor typeExtractor = new TypeExtractor(host);
             var extractedType = typeExtractor.ExtractTypeDefinition(cecilType);
             typeDefinitions[cecilType] = extractedType;
