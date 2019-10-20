@@ -10,8 +10,25 @@ using tac2cil.Assembler;
 
 namespace Tests
 {
+    public enum ProviderType
+    {
+        CCI,
+        METADATA,
+        CECIL
+    }
     class TestHandler
     {
+        public ILoader CreateProvider(ProviderType type, Host host)
+        {
+            if (type == ProviderType.CCI)
+                return new CCIProvider.Loader(host);
+            if (type == ProviderType.CECIL)
+                return new CecilProvider.Loader(host);
+            if (type == ProviderType.METADATA)
+                return new MetadataProvider.Loader(host);
+            return null;
+        }
+
         public Object RunOriginalCode(string source, string typeName, string method, object[] parameters)
         {
             Compiler compiler = new Compiler();
@@ -29,17 +46,13 @@ namespace Tests
             return result;
         }
 
-        public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, bool cciProvider)
+        public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, ProviderType providerType)
         {
             Compiler compiler = new Compiler();
             var output = compiler.CompileSource(source);
 
             Host host = new Host();
-            ILoader provider = null;
-            if (cciProvider)
-                provider = new CCIProvider.Loader(host);
-            else
-                provider = new CecilProvider.Loader(host);
+            ILoader provider = CreateProvider(providerType, host);
 
             provider.LoadAssembly(output);
 

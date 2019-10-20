@@ -13,12 +13,12 @@ namespace Tests
             return source;
         }
 
-        [TestCase("Tests.Resources.ObjectInitObjectFields.cs", "Test.Program", "Test", null, false, false)]
-        public void TestNoCrash(string sourceCodeResource, string type, string method, object[] parameters, bool useTac, bool cciProvider)
+        [TestCase("Tests.Resources.ObjectInitObjectFields.cs", "Test.Program", "Test", null, false, ProviderType.CCI)]
+        public void TestNoCrash(string sourceCodeResource, string type, string method, object[] parameters, bool useTac, ProviderType providerType)
         {
             var source = GetTestSourceCode(sourceCodeResource);
             TestHandler testHandler = new TestHandler();
-            testHandler.Test(source, type, method, parameters, useTac, cciProvider);
+            testHandler.Test(source, type, method, parameters, useTac, providerType);
         }
 
         private static readonly string[] TestReturnValueSeeds =
@@ -143,7 +143,7 @@ namespace Tests
             null, // 50
         };
 
-        private void TestReturnValue(string testSeed, object parameters, bool cciProvider, bool tac)
+        private void TestReturnValue(string testSeed, object parameters, ProviderType providerType, bool tac)
         {
             char[] s = { '/' };
             var resourceToTest = testSeed.Split(s);
@@ -156,7 +156,7 @@ namespace Tests
             TestHandler testHandler = new TestHandler();
             object[] param = parameters == null ? null : new object[1] { parameters };
 
-            var r = testHandler.Test(source, type, method, param, tac, cciProvider);
+            var r = testHandler.Test(source, type, method, param, tac, providerType);
             var expectedResult = testHandler.RunOriginalCode(source, type, method, param);
 
             Assert.AreEqual(expectedResult, r);
@@ -167,7 +167,7 @@ namespace Tests
             [ValueSource("TestReturnValueSeeds")] string testSeed,
             [ValueSource("TestReturnValueParameters")] object parameters)
         {
-            TestReturnValue(testSeed, parameters, true, false);
+            TestReturnValue(testSeed, parameters, ProviderType.CCI, false);
         }
 
         [Test, Sequential, Ignore("metadata provider is failing for too many test cases")]
@@ -178,7 +178,7 @@ namespace Tests
             if (IgnoreInMetadataProvider(testSeed))
                 return;
 
-            TestReturnValue(testSeed, parameters, false, false);
+            TestReturnValue(testSeed, parameters, ProviderType.METADATA, false);
         }
 
 		[Test, Sequential, Ignore("")]
@@ -200,7 +200,7 @@ namespace Tests
 			Compiler compiler = new Compiler();
 			var output = compiler.CompileSource(source);
 			loader.LoadAssembly(output);*/
-			TestReturnValue(testSeed, parameters, false, false);
+			TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
 		}
 
         [Test, Ignore("bug in cci provider")]
@@ -217,7 +217,7 @@ namespace Tests
             exporter.WriteAssemblies(outputDir);
         }
 
-		[Test, Ignore("")]
+		[Test]
 		public void TestCompileDSAWithCecilProvider()
 		{
 			Model.Host host = new Model.Host();
