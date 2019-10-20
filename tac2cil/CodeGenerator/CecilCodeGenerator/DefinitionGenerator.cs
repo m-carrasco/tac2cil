@@ -202,7 +202,7 @@ namespace CodeGenerator.CecilCodeGenerator
             }
             else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Enum)
             {
-                throw new NotImplementedException();
+                return CreateEnumDefinition(typeDefinition);
             }
             else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Interface)
             {
@@ -220,6 +220,23 @@ namespace CodeGenerator.CecilCodeGenerator
             throw new NotImplementedException();
         }
 
+        private Cecil.TypeDefinition CreateEnumDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            var def = CreateClassDefinition(typeDefinition);
+            def.IsSealed = true;
+            foreach (var field in def.Fields)
+            {
+                field.IsStatic = true;
+                field.IsLiteral = true;
+                field.HasDefault = true;
+            }
+
+            var underlyingType = ReferenceGenerator.TypeReference(typeDefinition.UnderlayingType);
+            var value__ = new Cecil.FieldDefinition("value__", Cecil.FieldAttributes.RTSpecialName | Cecil.FieldAttributes.SpecialName, underlyingType);
+            def.Fields.Insert(0,value__);
+
+            return def;
+        }
         private Cecil.TypeDefinition CreateDelegateDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
             var definition = CreateClassDefinition(typeDefinition);
@@ -301,7 +318,13 @@ namespace CodeGenerator.CecilCodeGenerator
                 fieldAttribute |= Cecil.FieldAttributes.Static;
 
             Cecil.TypeReference fieldType = ReferenceGenerator.TypeReference(fieldDefinition.Type);
-            Cecil.FieldDefinition cecilField = new Mono.Cecil.FieldDefinition(fieldDefinition.Name, fieldAttribute, fieldType);
+            Cecil.FieldDefinition cecilField = new Cecil.FieldDefinition(fieldDefinition.Name, fieldAttribute, fieldType);
+            
+            if (fieldDefinition.Value != null)
+            {
+                cecilField.Constant = fieldDefinition.Value.Value;
+                cecilField.HasConstant = true;
+            }
 
             return cecilField;
         }

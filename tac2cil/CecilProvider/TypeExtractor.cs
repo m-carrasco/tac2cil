@@ -95,8 +95,12 @@ namespace CecilProvider
         {
             AnalysisNet.Types.TypeDefinition result;
 
+            if (cecilType.IsEnum)
+            {
+                result = ExtractEnum(cecilType);
+            }
             // primero habria que preguntar si es delegate porque quiza entra en IsClass
-            if (IsDelegate(cecilType))
+            else if (IsDelegate(cecilType))
             {
                 // podriamos hacer un chequeo al terminar de generar todos los assemblies
                 // y usar el typehelper de zoppi con respecto al delegate
@@ -111,11 +115,6 @@ namespace CecilProvider
             {
                 result = ExtractInterface(cecilType);
             }
-            else if (cecilType.IsEnum)
-            {
-                throw new NotImplementedException();
-                //result = typeExtractor.ExtractEnum(typedef);
-            }
             else if (cecilType.IsValueType) // is it correct?
             {
                 throw new NotImplementedException();
@@ -124,6 +123,44 @@ namespace CecilProvider
                 throw new NotImplementedException();
 
             return result;
+        }
+        private AnalysisNet.Types.TypeDefinition ExtractEnum(Cecil.TypeDefinition typedef)
+        {
+            var name = typedef.Name;
+            var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ValueType, AnalysisNet.Types.TypeDefinitionKind.Enum);
+            type.Base = ExtractType(typedef.BaseType) as AnalysisNet.Types.IBasicType;
+
+            var valueField = typedef.Fields.Single(f => f.Name == "value__");
+            type.UnderlayingType = ExtractType(valueField.FieldType) as AnalysisNet.Types.IBasicType;
+
+            ExtractCustomAttributes(type.Attributes, typedef.CustomAttributes);
+            ExtractConstants(type, type.Fields, typedef.Fields);
+
+            return type;
+        }
+
+        private void ExtractConstants(AnalysisNet.Types.TypeDefinition containingType, IList<AnalysisNet.Types.FieldDefinition> dest, IEnumerable<Cecil.FieldDefinition> source)
+        {
+            source = source.Skip(1);
+
+            foreach (var constdef in source)
+            {
+                if (!constdef.HasConstant)
+                    continue;
+
+                var name = constdef.Name;
+                // Not sure if the type of the constant should be the enum type or the enum underlaying type.
+                var constant = new AnalysisNet.Types.FieldDefinition(name, containingType.UnderlayingType)
+                {
+                    Value = new AnalysisNet.ThreeAddressCode.Values.Constant(constdef.Constant)
+                    {
+                        Type = containingType.UnderlayingType
+                    }
+                };
+
+                constant.ContainingType = containingType;
+                dest.Add(constant);
+            }
         }
 
         private AnalysisNet.Types.TypeDefinition ExtractInterface(Cecil.TypeDefinition cecilType)
