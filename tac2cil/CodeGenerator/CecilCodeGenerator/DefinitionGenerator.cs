@@ -254,6 +254,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 cecilDef.IsNestedPublic = true;
             else
                 cecilDef.IsPublic = true;
+
+            // if TypeDef is a Value Type, Enum or Delegate must be Sealed.
+            if (typeDefinition.Base != null && 
+                typeDefinition.Base.Equals(AnalysisNet.Types.PlatformTypes.ValueType))
+                cecilDef.IsSealed = true;
         }
         private void SetDeclaringType(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
         {
