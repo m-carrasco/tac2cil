@@ -180,6 +180,29 @@ namespace Tests
 
             TestReturnValue(testSeed, parameters, false, false);
         }
+
+		[Test, Sequential, Ignore("")]
+		public void TestCecilProvider(
+		[ValueSource("TestReturnValueSeeds")] string testSeed,
+		[ValueSource("TestReturnValueParameters")] object parameters)
+		{
+			/*char[] s = { '/' };
+			var resourceToTest = testSeed.Split(s);
+
+			string sourceCodeResource = resourceToTest[0];
+			string type = resourceToTest[1];
+			string method = resourceToTest[2];
+
+			var source = GetTestSourceCode(sourceCodeResource);
+			var host = new Model.Host();
+			CecilProvider.Loader loader = new CecilProvider.Loader(host);
+
+			Compiler compiler = new Compiler();
+			var output = compiler.CompileSource(source);
+			loader.LoadAssembly(output);*/
+			TestReturnValue(testSeed, parameters, false, false);
+		}
+
         [Test, Ignore("bug in cci provider")]
         public void TestCompileDSA()
         {
@@ -194,7 +217,22 @@ namespace Tests
             exporter.WriteAssemblies(outputDir);
         }
 
-        private bool IgnoreInMetadataProvider(string testSeed)
+		[Test, , Ignore("")]
+		public void TestCompileDSAWithCecilProvider()
+		{
+			Model.Host host = new Model.Host();
+			Model.ILoader provider = new CecilProvider.Loader(host);
+
+			string dsaPath = System.Reflection.Assembly.GetAssembly(typeof(DSA.Algorithms.Sorting.BubbleSorter)).Location;
+			provider.LoadAssembly(dsaPath);
+
+			CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
+			string outputDir = Utils.GetTemporaryDirectory();
+			exporter.WriteAssemblies(outputDir);
+		}
+
+
+		private bool IgnoreInMetadataProvider(string testSeed)
         {
             HashSet<string> ignore = new HashSet<string>()
             {

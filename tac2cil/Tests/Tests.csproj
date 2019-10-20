@@ -129,9 +129,13 @@
       <Project>{f08216ad-e55c-44b1-a253-ab8b024b7597}</Project>
       <Name>Model</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\DSA\DSA\DSA\DSA.csproj">
-      <Project>{d6d492af-a0a3-43d9-a397-0d4c3cd3986f}</Project>
-      <Name>DSA</Name>
+    <ProjectReference Include="..\..\DSA\DSA\DSANetFramework\DSANetFramework.csproj">
+      <Project>{b356f062-649d-4d9f-b39d-68915c93b7e9}</Project>
+      <Name>DSANetFramework</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CecilProvider\CecilProvider.csproj">
+      <Project>{5eb992f8-49aa-4308-a79f-84611a0a54a3}</Project>
+      <Name>CecilProvider</Name>
     </ProjectReference>
     <ProjectReference Include="..\CodeGenerator\CodeGenerator.csproj">
       <Project>{f5d90666-1bbe-4207-bbd4-ece7c696c737}</Project>

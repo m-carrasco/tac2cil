@@ -39,7 +39,7 @@ namespace Tests
             if (cciProvider)
                 provider = new CCIProvider.Loader(host);
             else
-                provider = new MetadataProvider.Loader(host);
+                provider = new CecilProvider.Loader(host);
 
             provider.LoadAssembly(output);
 
