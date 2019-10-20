@@ -85,30 +85,29 @@ namespace CecilProvider
 
         private bool IsDelegate(Cecil.TypeDefinition cecilType)
         {
-            if (cecilType.BaseType == null)
-                return false;
+            var baseType = cecilType.BaseType;
 
-            // hacky as hell
-            return cecilType.BaseType.Name.Contains("SystemMulticastDelegate");
+            if (baseType == null)
+                return false;
+            
+            var coreLibrary = cecilType.Module.TypeSystem.CoreLibrary;
+
+            return coreLibrary.Equals(baseType.Scope) && baseType.Namespace == "System" && baseType.Name == "MulticastDelegate";
         }
+
         public AnalysisNet.Types.TypeDefinition ExtractTypeDefinition(Cecil.TypeDefinition cecilType)
         {
             AnalysisNet.Types.TypeDefinition result;
 
+            // the order matters
+            // an enum can be a value type
             if (cecilType.IsEnum)
             {
                 result = ExtractEnum(cecilType);
             }
-            // primero habria que preguntar si es delegate porque quiza entra en IsClass
-            else if (IsDelegate(cecilType))
-            {
-                // podriamos hacer un chequeo al terminar de generar todos los assemblies
-                // y usar el typehelper de zoppi con respecto al delegate
-                // el tema es que no funcionaria para net core
-                result = ExtractClass(cecilType);
-            }
             else if (cecilType.IsClass)
             {
+                // includes delegates!
                 result = ExtractClass(cecilType);
             }
             else if (cecilType.IsInterface)
@@ -179,7 +178,8 @@ namespace CecilProvider
         private AnalysisNet.Types.TypeDefinition ExtractClass(Cecil.TypeDefinition cecilType)
         {
             var name = cecilType.Name;
-            var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ReferenceType, AnalysisNet.Types.TypeDefinitionKind.Class);
+            var kind = IsDelegate(cecilType) ? AnalysisNet.Types.TypeDefinitionKind.Delegate : AnalysisNet.Types.TypeDefinitionKind.Class;
+            var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ReferenceType, kind);
             var basedef = cecilType.BaseType;
 
             if (basedef != null)
@@ -195,7 +195,6 @@ namespace CecilProvider
             //ExtractMethods(type, type.Methods, cecilType.Methods, sourceLocationProvider);
             
             ExtractExplicitMethodOverrides(type, cecilType);
-
             return type;
         }
 
