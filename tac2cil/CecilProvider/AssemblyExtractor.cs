@@ -59,15 +59,22 @@ namespace CecilProvider
 
             extractedType.ContainingAssembly = assembly;
 
-            var ns = GetOrCreateNamespace(cecilType.Namespace);
-            ns.Types.Add(extractedType);
-            extractedType.ContainingNamespace = ns;
-
+            // analysis-net does not follow ecma standard for nested types
+            // analysis-net expects to have nested types in their ContainingType.Types and share the same namespace that its enclosing type.
+            // However, nested types should not be added to the ContainingNamespace.Types
+            // If the type is not nested then the processed type is added to its namespace directly
             if (cecilType.DeclaringType != null)
             {
                 var containingType = typeDefinitions[cecilType.DeclaringType];
                 extractedType.ContainingType = containingType;
                 containingType.Types.Add(extractedType);
+                extractedType.ContainingNamespace = containingType.ContainingNamespace;
+            }
+            else
+            {
+                var ns = GetOrCreateNamespace(cecilType.Namespace);
+                extractedType.ContainingNamespace = ns;
+                ns.Types.Add(extractedType);
             }
 
             //throw new NotImplementedException();

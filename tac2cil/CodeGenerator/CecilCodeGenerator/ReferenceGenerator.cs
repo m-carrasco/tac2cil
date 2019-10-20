@@ -186,7 +186,10 @@ namespace CodeGenerator.CecilCodeGenerator
             cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
 
             if (basicType.ContainingType != null)
+            {
                 cecilTypeReference.DeclaringType = TypeReference(basicType.ContainingType);
+                cecilTypeReference.Namespace = String.Empty;
+            }
 
             if (basicType.GenericParameterCount > 0)
             {

@@ -427,7 +427,12 @@ namespace CecilProvider
             genericParameterExtractor.MapGenericParameters(typeref, newType);
 
             if (typeref.IsNested)
+            {
                 newType.ContainingType = (AnalysisNet.Types.IBasicType)ExtractType(typeref.DeclaringType);
+                // analysis-net does not follow ecma
+                // it expects nested types and their enclosing type share the same namespace
+                newType.ContainingNamespace = newType.ContainingType.ContainingNamespace;
+            }
 
             return newType;
         }

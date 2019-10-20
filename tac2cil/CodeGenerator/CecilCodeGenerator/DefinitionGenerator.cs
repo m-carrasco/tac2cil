@@ -277,7 +277,7 @@ namespace CodeGenerator.CecilCodeGenerator
         }
         private Cecil.TypeDefinition CreateClassDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
-            string namespaceName = typeDefinition.ContainingNamespace.FullName;
+            string namespaceName = typeDefinition.ContainingType != null ? String.Empty : typeDefinition.ContainingNamespace.FullName;
             string name = typeDefinition.MetadataName();
 
             var t = new Cecil.TypeDefinition(namespaceName, name, Cecil.TypeAttributes.Class);
