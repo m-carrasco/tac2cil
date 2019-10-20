@@ -217,7 +217,7 @@ namespace Tests
             exporter.WriteAssemblies(outputDir);
         }
 
-		[Test, , Ignore("")]
+		[Test, Ignore("")]
 		public void TestCompileDSAWithCecilProvider()
 		{
 			Model.Host host = new Model.Host();
