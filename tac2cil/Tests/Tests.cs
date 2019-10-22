@@ -181,25 +181,11 @@ namespace Tests
             TestReturnValue(testSeed, parameters, ProviderType.METADATA, false);
         }
 
-		[Test, Sequential, Ignore("")]
+		[Test, Sequential]
 		public void TestCecilProvider(
 		[ValueSource("TestReturnValueSeeds")] string testSeed,
 		[ValueSource("TestReturnValueParameters")] object parameters)
 		{
-			/*char[] s = { '/' };
-			var resourceToTest = testSeed.Split(s);
-
-			string sourceCodeResource = resourceToTest[0];
-			string type = resourceToTest[1];
-			string method = resourceToTest[2];
-
-			var source = GetTestSourceCode(sourceCodeResource);
-			var host = new Model.Host();
-			CecilProvider.Loader loader = new CecilProvider.Loader(host);
-
-			Compiler compiler = new Compiler();
-			var output = compiler.CompileSource(source);
-			loader.LoadAssembly(output);*/
 			TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
 		}
 
