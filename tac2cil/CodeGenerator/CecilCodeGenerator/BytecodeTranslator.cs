@@ -179,6 +179,24 @@ namespace CodeGenerator.CecilCodeGenerator
                     else
                         op = Mono.Cecil.Cil.OpCodes.Mul;
                     break;
+                case Model.Bytecode.BasicOperation.Eq:
+                    op = Mono.Cecil.Cil.OpCodes.Ceq;
+                    break;
+                case Model.Bytecode.BasicOperation.Gt:
+                    if (!instruction.UnsignedOperands)
+                        op = Mono.Cecil.Cil.OpCodes.Cgt;
+                    else
+                        op = Mono.Cecil.Cil.OpCodes.Cgt_Un;
+                    break;
+                case Model.Bytecode.BasicOperation.Lt:
+                    if (!instruction.UnsignedOperands)
+                        op = Mono.Cecil.Cil.OpCodes.Clt;
+                    else
+                        op = Mono.Cecil.Cil.OpCodes.Clt_Un;
+                    break;
+                case Model.Bytecode.BasicOperation.InitObject:
+                    op = Mono.Cecil.Cil.OpCodes.Initobj;
+                    break;
                 default:
                     throw new NotImplementedException();
             }
@@ -372,7 +390,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (variable.IsParameter)
                     {
                         if (variable.Name != "this")
-                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, parameterDefinitions[variable]);
+                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, parameterDefinitions[variable].Index);
                         else
                             cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, 0);
                     }
@@ -456,7 +474,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 throw new NotImplementedException();
             } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Cast)
             {
-                throw new NotImplementedException();
+                cilIns = processor.Create(Cecil.Cil.OpCodes.Castclass, referenceGenerator.TypeReference(instruction.ConversionType));
             }
             else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Unbox)
             {
