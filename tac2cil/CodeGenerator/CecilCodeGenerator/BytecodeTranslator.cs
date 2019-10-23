@@ -484,7 +484,94 @@ namespace CodeGenerator.CecilCodeGenerator
 
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
+        
+        private Cecil.Cil.OpCode GetConvOpcode(Model.Bytecode.ConvertInstruction instruction)
+        {
+            if (instruction.OverflowCheck)
+            {
+                if (instruction.UnsignedOperands)
+                {
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I1_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I2_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I4_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I8_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U1_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U2_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U4_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U8_Un;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U_Un;
+                }
+                else
+                {
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I1;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I2;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I4;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I8;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U1;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U2;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U4;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U8;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U;
+                }
 
+            }
+            else
+            {
+                if (instruction.UnsignedOperands &&
+                    instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float32))
+                    return Mono.Cecil.Cil.OpCodes.Conv_R_Un;
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float32))
+                    return Mono.Cecil.Cil.OpCodes.Conv_R4;
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float64))
+                    return Mono.Cecil.Cil.OpCodes.Conv_R8;
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_I1;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_I2;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_I4;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_I8;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_I;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                        return Mono.Cecil.Cil.OpCodes.Conv_U1;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                        return Mono.Cecil.Cil.OpCodes.Conv_U2;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                        return Mono.Cecil.Cil.OpCodes.Conv_U4;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                        return Mono.Cecil.Cil.OpCodes.Conv_U8;
+                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                        return Mono.Cecil.Cil.OpCodes.Conv_U;
+            }
+
+            throw new NotImplementedException();
+        }
         public override void Visit(Model.Bytecode.ConvertInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction cilIns;
@@ -494,7 +581,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Box, referenceGenerator.TypeReference(instruction.ConversionType));
             } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Conv)
             {
-                throw new NotImplementedException();
+                cilIns = processor.Create(GetConvOpcode(instruction));
             } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Cast)
             {
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Castclass, referenceGenerator.TypeReference(instruction.ConversionType));
