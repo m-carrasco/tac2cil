@@ -665,7 +665,24 @@ namespace CodeGenerator.CecilCodeGenerator
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
         public override void Visit(Model.Bytecode.SizeofInstruction instruction) { throw new NotImplementedException(); }
-        public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) { throw new NotImplementedException(); }
+        public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) 
+        {
+            Cecil.Cil.Instruction cilIns;
+            if (instruction.Token is AnalysisNet.Types.IType type)
+            {
+                var token = referenceGenerator.TypeReference(type);
+                cilIns = processor.Create(Cecil.Cil.OpCodes.Ldtoken, token);
+            }
+            else if (instruction.Token is AnalysisNet.Types.IFieldReference field)
+            {
+                var token = referenceGenerator.FieldReference(field);
+                cilIns = processor.Create(Cecil.Cil.OpCodes.Ldtoken, token);
+            }
+            else
+                throw new NotImplementedException();
+            
+            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+        }
         public override void Visit(Model.Bytecode.MethodCallInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction cilIns;
