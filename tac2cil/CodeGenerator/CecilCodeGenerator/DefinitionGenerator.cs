@@ -54,6 +54,27 @@ namespace CodeGenerator.CecilCodeGenerator
     {
         public MethodGenerator(ReferenceGenerator referenceGenerator) : base(referenceGenerator) { }
 
+        private void SetCustomAttributes(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
+        {
+            foreach (var analysisNetAttr in methodDefinition.Attributes)
+            {
+                var ctor = ReferenceGenerator.MethodReference(analysisNetAttr.Constructor);
+                var type = ReferenceGenerator.TypeReference(analysisNetAttr.Type);
+
+                var cecilAttr = new Cecil.CustomAttribute(ctor);
+                foreach (var constant in analysisNetAttr.Arguments)
+                {
+                    // todo: cci is not working correctly
+                    if (constant == null)
+                        continue;
+
+                    var cecilArg = new Cecil.CustomAttributeArgument(ReferenceGenerator.TypeReference(constant.Type), constant.Value);
+                    cecilAttr.ConstructorArguments.Add(cecilArg);
+                }
+
+                methodDef.CustomAttributes.Add(cecilAttr);
+            }
+        }
         public Cecil.MethodDefinition MethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
         {
             Cecil.MethodDefinition cecilMethodDefinition = new Cecil.MethodDefinition(methodDefinition.Name, 0, Context.CurrentModule.TypeSystem.Void);
@@ -69,7 +90,7 @@ namespace CodeGenerator.CecilCodeGenerator
             cecilMethodDefinition.DeclaringType = containingType as Cecil.TypeDefinition;
 
             SetOverrides(methodDefinition, cecilMethodDefinition);
-
+            SetCustomAttributes(methodDefinition, cecilMethodDefinition);
             var parameterDefinitions = CreateParameters(methodDefinition, cecilMethodDefinition);
 
             if (methodDefinition.HasBody)
