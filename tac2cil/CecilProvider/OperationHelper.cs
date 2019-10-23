@@ -51,7 +51,7 @@ namespace CecilProvider
 				case Mono.Cecil.Cil.Code.Dup:			return BasicOperation.Dup;
 				case Mono.Cecil.Cil.Code.Localloc:	return BasicOperation.LocalAllocation;
 				case Mono.Cecil.Cil.Code.Initblk:		return BasicOperation.InitBlock;
-				case Mono.Cecil.Cil.Code.Initobj:		return BasicOperation.InitObject;
+				//case Mono.Cecil.Cil.Code.Initobj:		return BasicOperation.InitObject;
 				case Mono.Cecil.Cil.Code.Cpblk:		return BasicOperation.CopyBlock;
 				case Mono.Cecil.Cil.Code.Cpobj:		return BasicOperation.CopyObject;
 				case Mono.Cecil.Cil.Code.Ret:			return BasicOperation.Return;

@@ -398,7 +398,7 @@ namespace CecilProvider
 					break;
 
 				case Mono.Cecil.Cil.Code.Initobj:
-					instruction = ProcessBasic(operation);
+					instruction = ProcessInitObj(operation);
 					break;
 
 				case Mono.Cecil.Cil.Code.Ldarg:
@@ -992,8 +992,14 @@ namespace CecilProvider
 			var instruction = new AnalysisNetBytecode.StoreFieldInstruction((uint)op.Offset, ourField);
 			return instruction;
 		}
+        private AnalysisNet.IInstruction ProcessInitObj(Cecil.Cil.Instruction op)
+        {
+            var type = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
+            var instruction = new AnalysisNetBytecode.InitObjInstruction((uint)op.Offset, type);
+            return instruction;
+        }
 
-		private AnalysisNet.IInstruction ProcessBasic(Cecil.Cil.Instruction op)
+        private AnalysisNet.IInstruction ProcessBasic(Cecil.Cil.Instruction op)
 		{
 			var operation = OperationHelper.ToBasicOperation(op.OpCode.Code);
 			var overflow = OperationHelper.PerformsOverflowCheck(op.OpCode.Code);
