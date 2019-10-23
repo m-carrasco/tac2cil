@@ -100,7 +100,12 @@ namespace CodeGenerator.CecilCodeGenerator
             Mono.Cecil.Cil.Instruction ins = processor.Create(Mono.Cecil.Cil.OpCodes.Constrained, referenceGenerator.TypeReference(instruction.ThisType));
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { ins };
         }
-
+        public override void Visit(Model.Bytecode.InitObjInstruction instruction)
+        {
+            var op = Cecil.Cil.OpCodes.Initobj;
+            var type = referenceGenerator.TypeReference(instruction.Type);
+            this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op, type) };
+        }
         public override void Visit(Model.Bytecode.BasicInstruction instruction)
         {
             Nullable<Mono.Cecil.Cil.OpCode> op = null;
