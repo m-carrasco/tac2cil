@@ -71,27 +71,39 @@ namespace CodeGenerator.CecilCodeGenerator
                 translated[ins] = this.Result;
             }
 
-            TranslatePendingBranches(translated, methodDefinition.Body.Instructions.OfType<AnalysisNet.Bytecode.BranchInstruction>().ToList());
+            IEnumerable<AnalysisNet.Bytecode.Instruction> branches = methodDefinition.Body.Instructions.OfType<AnalysisNet.Bytecode.BranchInstruction>();
+            IEnumerable<AnalysisNet.Bytecode.Instruction> switches = methodDefinition.Body.Instructions.OfType<AnalysisNet.Bytecode.SwitchInstruction>();
+            var union = branches.Union(switches);
+            TranslatePendingBranches(translated, union.ToList());
 
             return translated.Values.SelectMany(l => l);
         }
-        private void TranslatePendingBranches(IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated, IList<AnalysisNet.Bytecode.BranchInstruction> pending)
+        private void TranslatePendingBranches(IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated, IList<AnalysisNet.Bytecode.Instruction> pending)
         {
+            TargetFinder targetFinder = new TargetFinder(translated);
+
             while (pending.Count > 0)
             {
-                var br = pending.First();
-                pending.Remove(br);
+                var ins = pending.First();
+                pending.Remove(ins);
 
-                TargetFinder targetFinder = new TargetFinder(translated);
-                var result = translated[targetFinder.GetTarget(br.Target)];
-
-                // this branch is pending on another pending branch
-                if (result.Count > 0)
+                if (ins is AnalysisNet.Bytecode.BranchInstruction br)
                 {
-                    translated[br].First().Operand = result.First();
+                    var result = translated[targetFinder.GetTarget(br.Target)].First();
+                    translated[br].First().Operand = result;
+                }
+                else if (ins is AnalysisNet.Bytecode.SwitchInstruction switchIns)
+                {
+                    for (int idx = 0; idx < switchIns.Targets.Count; idx++)
+                    {
+                        var target = switchIns.Targets[idx];
+                        var result = translated[targetFinder.GetTarget(target)].First();
+                        var cecilTargets = translated[switchIns].First().Operand as Cecil.Cil.Instruction[];
+                        cecilTargets[idx] = result;
+                    }
                 }
                 else
-                    pending.Add(br); // add as last element
+                    throw new NotImplementedException();
             }
         }
 
@@ -646,7 +658,12 @@ namespace CodeGenerator.CecilCodeGenerator
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
-        public override void Visit(Model.Bytecode.SwitchInstruction instruction) { throw new NotImplementedException(); }
+        public override void Visit(Model.Bytecode.SwitchInstruction instruction)
+        {
+            var targets = instruction.Targets.Select(t => processor.Create(Cecil.Cil.OpCodes.Nop));
+            var cilIns = processor.Create(Cecil.Cil.OpCodes.Switch, targets.ToArray());
+            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+        }
         public override void Visit(Model.Bytecode.SizeofInstruction instruction) { throw new NotImplementedException(); }
         public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) { throw new NotImplementedException(); }
         public override void Visit(Model.Bytecode.MethodCallInstruction instruction)
