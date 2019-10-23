@@ -359,6 +359,7 @@ namespace CecilProvider
 				case Mono.Cecil.Cil.Code.Conv_R8:
 				case Mono.Cecil.Cil.Code.Conv_R_Un:		return PlatformTypes.Float64;
                 case Mono.Cecil.Cil.Code.Ldelem_Ref:
+                case Mono.Cecil.Cil.Code.Stelem_Ref:
                 case Mono.Cecil.Cil.Code.Stind_Ref:
                 case Mono.Cecil.Cil.Code.Ldind_Ref:
                 case Mono.Cecil.Cil.Code.Ldnull:			return PlatformTypes.Object;

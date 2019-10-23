@@ -321,6 +321,12 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stobj;
             }
+            else if (instruction.Type.TypeKind == Model.Types.TypeKind.Unknown && instruction.Type is AnalysisNet.Types.IGenericParameterReference)
+            {
+                // the idea is to contemplate cases where the type is a generic type
+                // however, i think we should have to check the type constraints.
+                opcode = Mono.Cecil.Cil.OpCodes.Stobj;
+            }
             else
                 throw new NotImplementedException();
 
@@ -407,9 +413,9 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (variable.IsParameter)
                     {
                         if (variable.Name != "this")
-                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, parameterDefinitions[variable].Index);
+                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, parameterDefinitions[variable].Index);
                         else
-                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, 0);
+                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, 0);
                     }
                     else
                         cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, variableDefinitions[variable]);
