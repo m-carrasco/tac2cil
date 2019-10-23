@@ -199,8 +199,20 @@ namespace CodeGenerator.CecilCodeGenerator
                     else
                         op = Mono.Cecil.Cil.OpCodes.Clt_Un;
                     break;
-                case Model.Bytecode.BasicOperation.InitObject:
-                    op = Mono.Cecil.Cil.OpCodes.Initobj;
+                case Model.Bytecode.BasicOperation.Or:
+                    op = Mono.Cecil.Cil.OpCodes.Or;
+                    break;
+                case Model.Bytecode.BasicOperation.LoadArrayLength:
+                    op = Mono.Cecil.Cil.OpCodes.Ldlen;
+                    break;
+                case Model.Bytecode.BasicOperation.And:
+                    op = Mono.Cecil.Cil.OpCodes.And;
+                    break;
+                case Model.Bytecode.BasicOperation.Xor:
+                    op = Mono.Cecil.Cil.OpCodes.Xor;
+                    break;
+                case Model.Bytecode.BasicOperation.Not:
+                    op = Mono.Cecil.Cil.OpCodes.Not;
                     break;
                 default:
                     throw new NotImplementedException();
