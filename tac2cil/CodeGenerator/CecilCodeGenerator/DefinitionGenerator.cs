@@ -16,7 +16,7 @@ namespace CodeGenerator.CecilCodeGenerator
         public Context Context { get; }
         public ReferenceGenerator ReferenceGenerator { get; }
 
-        public void CreateInstructions(Model.Types.MethodDefinition methodDefinition,
+        public IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> CreateInstructions(Model.Types.MethodDefinition methodDefinition,
             Mono.Cecil.MethodDefinition methodDef,
             IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions,
             IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions)
@@ -24,10 +24,14 @@ namespace CodeGenerator.CecilCodeGenerator
             Cecil.Cil.ILProcessor ilProcessor = methodDef.Body.GetILProcessor();
             BytecodeTranslator translator = new BytecodeTranslator(methodDefinition, variableDefinitions, parameterDefinitions, ReferenceGenerator, ilProcessor);
 
-            var instructions = translator.Translate();
+            // analysis net instruction -> [cecil instructions]
+            var mappingTranslatedInstructions = translator.Translate();
 
+            var instructions = mappingTranslatedInstructions.Values.SelectMany(l => l);
             foreach (Mono.Cecil.Cil.Instruction ins in instructions)
                 ilProcessor.Append(ins);
+
+            return mappingTranslatedInstructions;
         }
     }
     internal abstract class DefinitionGenerator
@@ -99,7 +103,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 cecilMethodDefinition.Body.InitLocals = methodDefinition.Body.LocalVariables.Count > 0;
                 IDictionary<AnalysisNet.ThreeAddressCode.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions = CreateLocalVariables(methodDefinition, cecilMethodDefinition);
                 InstructionGenerator instructionGenerator = new InstructionGenerator(ReferenceGenerator);
-                instructionGenerator.CreateInstructions(methodDefinition, cecilMethodDefinition, variableDefinitions, parameterDefinitions);
+                
+                // analysis-net instruction -> [cecil instruction]
+                var mapInstructions = instructionGenerator.CreateInstructions(methodDefinition, cecilMethodDefinition, variableDefinitions, parameterDefinitions);
+
+                CreateExceptionHandlers(mapInstructions, methodDefinition.Body, cecilMethodDefinition.Body);
             }
 
             return cecilMethodDefinition;

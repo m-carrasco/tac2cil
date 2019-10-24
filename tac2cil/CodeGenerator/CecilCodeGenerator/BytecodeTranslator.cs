@@ -12,7 +12,7 @@ namespace CodeGenerator.CecilCodeGenerator
 {
     internal class TargetFinder
     {
-        public TargetFinder(IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated)
+        public TargetFinder(ICollection<Model.Bytecode.Instruction> translated)
         {
             this.translated = translated;
         }
@@ -20,7 +20,7 @@ namespace CodeGenerator.CecilCodeGenerator
         public Model.Bytecode.Instruction GetTarget(string target)
         {
             var offset = ParseTarget(target);
-            return translated.Where(kv => kv.Key.Offset == offset).Single().Key;
+            return translated.Where(kv => kv.Offset == offset).Single();
         }
 
         private uint ParseTarget(string target)
@@ -33,7 +33,7 @@ namespace CodeGenerator.CecilCodeGenerator
             return targetOffset;
         }
 
-        private IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated;
+        private ICollection<Model.Bytecode.Instruction> translated;
     }
 
     internal class BytecodeTranslator : Model.Bytecode.Visitor.InstructionVisitor
@@ -58,7 +58,7 @@ namespace CodeGenerator.CecilCodeGenerator
             this.referenceGenerator = referenceGenerator;
         }
 
-        public IEnumerable<Cecil.Cil.Instruction> Translate()
+        public IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> Translate()
         {
             IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated
                 = new Dictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>>();
@@ -76,11 +76,11 @@ namespace CodeGenerator.CecilCodeGenerator
             var union = branches.Union(switches);
             TranslatePendingBranches(translated, union.ToList());
 
-            return translated.Values.SelectMany(l => l);
+            return translated;//return translated.Values.SelectMany(l => l);
         }
         private void TranslatePendingBranches(IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> translated, IList<AnalysisNet.Bytecode.Instruction> pending)
         {
-            TargetFinder targetFinder = new TargetFinder(translated);
+            TargetFinder targetFinder = new TargetFinder(translated.Keys);
 
             while (pending.Count > 0)
             {
@@ -178,9 +178,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 case Model.Bytecode.BasicOperation.Throw:
                     op = Mono.Cecil.Cil.OpCodes.Throw;
                     break;
+                case Model.Bytecode.BasicOperation.EndFilter:
+                    op = Mono.Cecil.Cil.OpCodes.Endfilter;
+                    break;
                 case Model.Bytecode.BasicOperation.EndFinally:
-                    // we don't support exceptions yet
-                    op = Mono.Cecil.Cil.OpCodes.Nop;
+                    op = Mono.Cecil.Cil.OpCodes.Endfinally;
                     break;
                 case Model.Bytecode.BasicOperation.Shl:
                     op = Mono.Cecil.Cil.OpCodes.Shl;
