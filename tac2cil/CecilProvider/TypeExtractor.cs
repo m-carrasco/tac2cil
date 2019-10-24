@@ -104,21 +104,21 @@ namespace CecilProvider
             if (cecilType.IsEnum)
             {
                 result = ExtractEnum(cecilType);
+            } else if (cecilType.IsValueType)
+            {
+                result = ExtractClass(cecilType, AnalysisNet.Types.TypeKind.ValueType, AnalysisNet.Types.TypeDefinitionKind.Struct);
             }
             else if (cecilType.IsClass)
             {
                 // includes delegates!
-                result = ExtractClass(cecilType);
+                var kind = IsDelegate(cecilType) ? AnalysisNet.Types.TypeDefinitionKind.Delegate : AnalysisNet.Types.TypeDefinitionKind.Class;
+                result = ExtractClass(cecilType, AnalysisNet.Types.TypeKind.ReferenceType, kind);
             }
             else if (cecilType.IsInterface)
             {
                 result = ExtractInterface(cecilType);
             }
-            else if (cecilType.IsValueType) // is it correct?
-            {
-                throw new NotImplementedException();
-                //result = typeExtractor.ExtractStruct(typedef, pdbReader);
-            } else
+            else
                 throw new NotImplementedException();
 
             return result;
@@ -175,18 +175,14 @@ namespace CecilProvider
             return type;
         }
 
-        private AnalysisNet.Types.TypeDefinition ExtractClass(Cecil.TypeDefinition cecilType)
+        private AnalysisNet.Types.TypeDefinition ExtractClass(Cecil.TypeDefinition cecilType, AnalysisNet.Types.TypeKind typeKind, AnalysisNet.Types.TypeDefinitionKind typeDefinitionKind)
         {
             var name = UnmangleName(cecilType);
-            var kind = IsDelegate(cecilType) ? AnalysisNet.Types.TypeDefinitionKind.Delegate : AnalysisNet.Types.TypeDefinitionKind.Class;
-            var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ReferenceType, kind);
+            var type = new AnalysisNet.Types.TypeDefinition(name, typeKind, typeDefinitionKind);
             var basedef = cecilType.BaseType;
 
             if (basedef != null)
                 type.Base = ExtractType(basedef) as AnalysisNet.Types.IBasicType;
-
-            if (IsDelegate(cecilType))
-                type.Kind = AnalysisNet.Types.TypeDefinitionKind.Delegate;
 
             ExtractCustomAttributes(type.Attributes, cecilType.CustomAttributes);
             ExtractGenericTypeParameters(type, cecilType);

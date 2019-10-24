@@ -219,7 +219,7 @@ namespace CodeGenerator.CecilCodeGenerator
         {
             if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Struct)
             {
-                throw new NotImplementedException();
+                return CreateStructDefinition(typeDefinition);
             }
             else if (typeDefinition.Kind == AnalysisNet.Types.TypeDefinitionKind.Enum)
             {
@@ -320,7 +320,13 @@ namespace CodeGenerator.CecilCodeGenerator
             foreach (var inter in typeDefinition.Interfaces)
                 t.Interfaces.Add(new Cecil.InterfaceImplementation(ReferenceGenerator.TypeReference(inter)));
         }
-
+        private Cecil.TypeDefinition CreateStructDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
+        {
+            var cecilDefinition = CreateClassDefinition(typeDefinition);
+            cecilDefinition.IsExplicitLayout = true;
+            cecilDefinition.IsSealed = true;
+            return cecilDefinition;
+        }
         private Cecil.TypeDefinition CreateInterfaceDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
             var cecilDefinition = CreateClassDefinition(typeDefinition);
