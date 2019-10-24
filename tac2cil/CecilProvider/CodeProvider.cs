@@ -1020,10 +1020,7 @@ namespace CecilProvider
 
             if (operation == AnalysisNetBytecode.ConvertOperation.Box)
             {
-                if (cciType.IsValueType)
-                    ourType = AnalysisNet.Types.PlatformTypes.Object;
-                else
-                    ourType = typeExtractor.ExtractType(cciType);
+                ourType = typeExtractor.ExtractType(cciType);
             }
             else if (operation == AnalysisNetBytecode.ConvertOperation.Conv)
             {
