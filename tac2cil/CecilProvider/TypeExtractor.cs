@@ -384,13 +384,14 @@ namespace CecilProvider
 
         private AnalysisNet.Types.MethodParameterKind GetMethodParameterKind(Cecil.ParameterDefinition parameterref)
         {
-            if (parameterref.IsIn && parameterref.IsOut)
-                return AnalysisNet.Types.MethodParameterKind.Ref;
+            if (parameterref.IsIn)
+                return AnalysisNet.Types.MethodParameterKind.In;
             else if (parameterref.IsOut)
                 return AnalysisNet.Types.MethodParameterKind.Out;
+            else if (parameterref.ParameterType.IsByReference)
+                return AnalysisNet.Types.MethodParameterKind.Ref;
             else
-                return AnalysisNet.Types.MethodParameterKind.In;
-
+                return AnalysisNet.Types.MethodParameterKind.Normal;
         }
         private void ExtractParameters(IList<AnalysisNet.Types.MethodParameter> dest, IEnumerable<Cecil.ParameterDefinition> source)
         {

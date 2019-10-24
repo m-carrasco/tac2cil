@@ -129,6 +129,11 @@ namespace CodeGenerator.CecilCodeGenerator
                     paramDef.HasDefault = true;
                 }
 
+                if (methodParameter.Kind == AnalysisNet.Types.MethodParameterKind.In)
+                    paramDef.IsIn = true;
+                else if (methodParameter.Kind == AnalysisNet.Types.MethodParameterKind.Out)
+                    paramDef.IsOut = true;
+
                 methodDef.Parameters.Add(paramDef);
 
                 // map body parameters to cecil parameters

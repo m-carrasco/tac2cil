@@ -119,6 +119,10 @@ namespace CodeGenerator.CecilCodeGenerator
             foreach (var parameter in methodReference.Parameters)
             {
                 var cecilParam = new Cecil.ParameterDefinition(TypeReference(parameter.Type));
+                if (parameter.Kind == AnalysisNet.Types.MethodParameterKind.In)
+                    cecilParam.IsIn = true;
+                else if (parameter.Kind == AnalysisNet.Types.MethodParameterKind.Out)
+                    cecilParam.IsOut = true;
                 cecilMethodReference.Parameters.Add(cecilParam);
             }
 
