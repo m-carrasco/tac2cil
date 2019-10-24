@@ -323,7 +323,7 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.TypeDefinition CreateStructDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
             var cecilDefinition = CreateClassDefinition(typeDefinition);
-            cecilDefinition.IsExplicitLayout = true;
+            cecilDefinition.IsSequentialLayout = true;
             cecilDefinition.IsSealed = true;
             return cecilDefinition;
         }

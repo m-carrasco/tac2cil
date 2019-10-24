@@ -184,6 +184,8 @@ namespace CodeGenerator.CecilCodeGenerator
                 throw new NotImplementedException();
 
             cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
+            if (basicType.TypeKind == AnalysisNet.Types.TypeKind.ValueType)
+                cecilTypeReference.IsValueType = true;
 
             if (basicType.ContainingType != null)
             {
