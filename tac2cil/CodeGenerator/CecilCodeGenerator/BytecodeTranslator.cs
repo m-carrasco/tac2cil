@@ -797,8 +797,8 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (!instruction.Array.IsVector)
             {
-                var arrayGet = ArrayHelper.ArraySet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
-                res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayGet);
+                var arraySet = ArrayHelper.ArraySet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
+                res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arraySet);
             }
             else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.IntPtr)
             {

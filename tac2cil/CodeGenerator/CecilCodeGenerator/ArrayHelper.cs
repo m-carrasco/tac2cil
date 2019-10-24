@@ -22,10 +22,9 @@ namespace CodeGenerator
         {
             MethodReference arrayGet = new MethodReference("Set", arrayType.Module.TypeSystem.Void, arrayType);
             arrayGet.HasThis = true;
-            arrayGet.Parameters.Add(new ParameterDefinition(arrayType.ElementType));
             for (int i = 0; i < arrayType.Rank; i++)
                 arrayGet.Parameters.Add(new ParameterDefinition(arrayType.Module.TypeSystem.Int32));
-
+            arrayGet.Parameters.Add(new ParameterDefinition(arrayType.ElementType));
             return arrayGet;
         }
 
