@@ -99,6 +99,7 @@
     <EmbeddedResource Include="Resources\ArrayList.cs" />
     <EmbeddedResource Include="Resources\NestedGenerics.cs" />
     <EmbeddedResource Include="Resources\Delegates.cs" />
+    <EmbeddedResource Include="Resources\Switch.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />
