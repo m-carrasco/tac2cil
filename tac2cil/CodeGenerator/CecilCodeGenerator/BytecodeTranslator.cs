@@ -707,7 +707,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
         public override void Visit(Model.Bytecode.CreateArrayInstruction instruction)
         {
-            var cilArrayType = referenceGenerator.TypeReference(instruction.Type);
+            var cilArrayType = referenceGenerator.TypeReference(instruction.Type) as Cecil.ArrayType;
 
             Mono.Cecil.Cil.Instruction cilIns = null;
             if (!instruction.Type.IsVector)
@@ -716,7 +716,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, arrayCtor);
             }
             else
-                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType.GetElementType());
+                cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType.ElementType);
 
             this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }

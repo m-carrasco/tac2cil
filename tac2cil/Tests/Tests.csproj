@@ -102,6 +102,7 @@
     <EmbeddedResource Include="Resources\Switch.cs" />
     <EmbeddedResource Include="Resources\Struct.cs" />
     <EmbeddedResource Include="Resources\InOutParameters2.cs" />
+    <EmbeddedResource Include="Resources\Arrays2.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />
