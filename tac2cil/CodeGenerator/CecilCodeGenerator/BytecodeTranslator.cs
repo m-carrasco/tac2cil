@@ -425,7 +425,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (variable.IsParameter)
                     {
                         if (variable.Name != "this")
-                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, parameterDefinitions[variable].Index);
+                            cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, parameterDefinitions[variable]);
                         else
                             cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, 0);
                     }
