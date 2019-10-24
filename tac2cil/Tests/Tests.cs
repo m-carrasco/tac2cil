@@ -91,6 +91,8 @@ namespace Tests
             "Tests.Resources.Switch.cs/Test.Program/Test", // 51
             "Tests.Resources.Switch.cs/Test.Program/Test", // 52
             "Tests.Resources.Switch.cs/Test.Program/Test", // 53
+
+            "Tests.Resources.Struct.cs/Test.Program/Test", // 54
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -148,7 +150,8 @@ namespace Tests
             null, // 50
             1,    // 51
             2,    // 52
-            3     // 53
+            3,    // 53
+            null  // 54
         };
 
         private void TestReturnValue(string testSeed, object parameters, ProviderType providerType, bool tac)
@@ -211,7 +214,7 @@ namespace Tests
             exporter.WriteAssemblies(outputDir);
         }
 
-		[Test]
+		[Test, Ignore("")]
 		public void TestCompileDSAWithCecilProvider()
 		{
 			Model.Host host = new Model.Host();
