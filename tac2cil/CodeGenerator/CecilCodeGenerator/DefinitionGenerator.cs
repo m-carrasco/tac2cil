@@ -216,6 +216,13 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (methodDefinition.ContainingType.Kind == AnalysisNet.Types.TypeDefinitionKind.Delegate)
                 cecilMethodDefinition.IsRuntime = true;
+
+            // hack for properties
+            if (methodDefinition.Name.StartsWith("get_") || methodDefinition.Name.StartsWith("set_"))
+            {
+                cecilMethodDefinition.IsSpecialName = true;
+                cecilMethodDefinition.IsHideBySig = true;
+            }
         }
     }
     internal class TypeGenerator : DefinitionGenerator
