@@ -79,12 +79,66 @@ namespace CodeGenerator.CecilCodeGenerator
                 methodDef.CustomAttributes.Add(cecilAttr);
             }
         }
+        private Cecil.Cil.ExceptionHandlerType GetExceptionHandlerType(AnalysisNet.ExceptionHandlerBlockKind kind)
+        {
+            if (kind == AnalysisNet.ExceptionHandlerBlockKind.Catch)
+                return Cecil.Cil.ExceptionHandlerType.Catch;
+            if (kind == AnalysisNet.ExceptionHandlerBlockKind.Fault)
+                return Cecil.Cil.ExceptionHandlerType.Fault;
+            if (kind == AnalysisNet.ExceptionHandlerBlockKind.Filter)
+                return Cecil.Cil.ExceptionHandlerType.Filter;
+            if (kind == AnalysisNet.ExceptionHandlerBlockKind.Finally)
+                return Cecil.Cil.ExceptionHandlerType.Finally;
+
+            throw new NotImplementedException();
+        }
+        private Cecil.Cil.Instruction GetTarget(string of, IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> map)
+        {
+            TargetFinder targetFinder = new TargetFinder(map.Keys);
+            var analysisNetIns = targetFinder.GetTarget(of);
+            return map[analysisNetIns].First();
+        }
+        private void CreateExceptionHandlers(IDictionary<Model.Bytecode.Instruction, IList<Mono.Cecil.Cil.Instruction>> map,
+            AnalysisNet.Types.MethodBody analysisNetBody, 
+            Cecil.Cil.MethodBody cecilBody)
+        {
+            foreach (var protectedBlock in analysisNetBody.ExceptionInformation)
+            {
+                var handler = new Cecil.Cil.ExceptionHandler(GetExceptionHandlerType(protectedBlock.Handler.Kind));
+                handler.TryStart = GetTarget(protectedBlock.Start, map);
+                handler.TryEnd = GetTarget(protectedBlock.End, map);
+
+                if (protectedBlock.Handler is AnalysisNet.FilterExceptionHandler filterHandler)
+                {
+                    handler.CatchType = ReferenceGenerator.TypeReference(filterHandler.ExceptionType);
+                    handler.FilterStart = GetTarget(filterHandler.FilterStart, map);
+                    handler.HandlerStart = GetTarget(filterHandler.Start, map);
+                    handler.HandlerEnd = GetTarget(filterHandler.End, map);
+                } else if (protectedBlock.Handler is AnalysisNet.CatchExceptionHandler catchHandler)
+                {
+                    handler.CatchType = ReferenceGenerator.TypeReference(catchHandler.ExceptionType);
+                    handler.HandlerStart = GetTarget(catchHandler.Start, map);
+                    handler.HandlerEnd = GetTarget(catchHandler.End, map);
+                } else if (protectedBlock.Handler is AnalysisNet.FaultExceptionHandler faultHandler)
+                {
+                    handler.HandlerStart = GetTarget(faultHandler.Start, map);
+                    handler.HandlerEnd = GetTarget(faultHandler.End, map);
+                } else if (protectedBlock.Handler is AnalysisNet.FinallyExceptionHandler finallyHandler)
+                {
+                    handler.HandlerStart = GetTarget(finallyHandler.Start, map);
+                    handler.HandlerEnd = GetTarget(finallyHandler.End, map);
+                } else
+                    throw new NotImplementedException();
+                cecilBody.ExceptionHandlers.Add(handler);
+            }
+        }
+
         public Cecil.MethodDefinition MethodDefinition(AnalysisNet.Types.MethodDefinition methodDefinition)
         {
             Cecil.MethodDefinition cecilMethodDefinition = new Cecil.MethodDefinition(methodDefinition.Name, 0, Context.CurrentModule.TypeSystem.Void);
             GenerateMethodAttributes(methodDefinition, cecilMethodDefinition);
             cecilMethodDefinition.CreateGenericParameters(methodDefinition.GenericParameters.Count);
-            
+
             Cecil.TypeReference returnType = ReferenceGenerator.TypeReference(methodDefinition.ReturnType);
             cecilMethodDefinition.ReturnType = returnType;
             AddConstraintsToGenericParameters(methodDefinition, cecilMethodDefinition);
