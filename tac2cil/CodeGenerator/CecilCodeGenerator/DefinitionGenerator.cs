@@ -52,15 +52,9 @@ namespace CodeGenerator.CecilCodeGenerator
                 genericParameterProvider.GenericParameters.ElementAt(analysisNetParameter.Index).Constraints.AddRange(constraints);
             }
         }
-    }
-
-    internal class MethodGenerator : DefinitionGenerator
-    {
-        public MethodGenerator(ReferenceGenerator referenceGenerator) : base(referenceGenerator) { }
-
-        private void SetCustomAttributes(AnalysisNet.Types.MethodDefinition methodDefinition, Cecil.MethodDefinition methodDef)
+        protected void SetCustomAttributes(ICollection<AnalysisNet.Types.CustomAttribute> ourAttributes, ICollection<Cecil.CustomAttribute> cecilAttributes)
         {
-            foreach (var analysisNetAttr in methodDefinition.Attributes)
+            foreach (var analysisNetAttr in ourAttributes)
             {
                 var ctor = ReferenceGenerator.MethodReference(analysisNetAttr.Constructor);
                 var type = ReferenceGenerator.TypeReference(analysisNetAttr.Type);
@@ -76,9 +70,15 @@ namespace CodeGenerator.CecilCodeGenerator
                     cecilAttr.ConstructorArguments.Add(cecilArg);
                 }
 
-                methodDef.CustomAttributes.Add(cecilAttr);
+                cecilAttributes.Add(cecilAttr);
             }
         }
+    }
+
+    internal class MethodGenerator : DefinitionGenerator
+    {
+        public MethodGenerator(ReferenceGenerator referenceGenerator) : base(referenceGenerator) { }
+
         private Cecil.Cil.ExceptionHandlerType GetExceptionHandlerType(AnalysisNet.ExceptionHandlerBlockKind kind)
         {
             if (kind == AnalysisNet.ExceptionHandlerBlockKind.Catch)
@@ -148,7 +148,7 @@ namespace CodeGenerator.CecilCodeGenerator
             cecilMethodDefinition.DeclaringType = containingType as Cecil.TypeDefinition;
 
             SetOverrides(methodDefinition, cecilMethodDefinition);
-            SetCustomAttributes(methodDefinition, cecilMethodDefinition);
+            SetCustomAttributes(methodDefinition.Attributes, cecilMethodDefinition.CustomAttributes);
             var parameterDefinitions = CreateParameters(methodDefinition, cecilMethodDefinition);
 
             if (methodDefinition.HasBody)
@@ -324,6 +324,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 field.IsStatic = true;
                 field.IsLiteral = true;
                 field.HasDefault = true;
+                field.FieldType.IsValueType = true;
             }
 
             var underlyingType = ReferenceGenerator.TypeReference(typeDefinition.UnderlayingType);
@@ -340,20 +341,26 @@ namespace CodeGenerator.CecilCodeGenerator
         }
         private void SetAttributes(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
         {
-            // hack: an abstract class can have no abstract methods
-            // there is no field in the type definition
-            if (typeDefinition.Methods.Any(m => m.IsAbstract))
-                cecilDef.IsAbstract = true;
+            cecilDef.IsAbstract = typeDefinition.IsAbstract;
+            cecilDef.IsSealed = typeDefinition.IsSealed;
 
             if (typeDefinition.ContainingType != null)
                 cecilDef.IsNestedPublic = true;
             else
                 cecilDef.IsPublic = true;
 
-            // if TypeDef is a Value Type, Enum or Delegate must be Sealed.
-            if (typeDefinition.Base != null && 
-                typeDefinition.Base.Equals(AnalysisNet.Types.PlatformTypes.ValueType))
-                cecilDef.IsSealed = true;
+            if (typeDefinition.LayoutInformation is AnalysisNet.Types.LayoutInformation layoutInfo)
+            {
+                if (layoutInfo.Kind == AnalysisNet.Types.LayoutKind.AutoLayout)
+                    cecilDef.IsAutoLayout = true;
+                else if (layoutInfo.Kind == AnalysisNet.Types.LayoutKind.ExplicitLayout)
+                    cecilDef.IsExplicitLayout = true;
+                else if (layoutInfo.Kind == AnalysisNet.Types.LayoutKind.SequentialLayout)
+                    cecilDef.IsSequentialLayout = true;
+
+                cecilDef.PackingSize = layoutInfo.PackingSize;
+                cecilDef.ClassSize = layoutInfo.ClassSize;
+            }
         }
         private void SetDeclaringType(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition cecilDef)
         {
@@ -386,9 +393,9 @@ namespace CodeGenerator.CecilCodeGenerator
             AddConstraintsToGenericParameters(typeDefinition, t);
             AddInterfaceImplementations(typeDefinition, t);
             CreateFieldDefinitions(typeDefinition, t);
+            SetCustomAttributes(typeDefinition.Attributes, t.CustomAttributes);
             return t;
         }
-
         private void AddInterfaceImplementations(AnalysisNet.Types.TypeDefinition typeDefinition, Cecil.TypeDefinition t)
         {
             foreach (var inter in typeDefinition.Interfaces)
@@ -397,8 +404,6 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.TypeDefinition CreateStructDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
             var cecilDefinition = CreateClassDefinition(typeDefinition);
-            cecilDefinition.IsSequentialLayout = true;
-            cecilDefinition.IsSealed = true;
             return cecilDefinition;
         }
         private Cecil.TypeDefinition CreateInterfaceDefinition(AnalysisNet.Types.TypeDefinition typeDefinition)
@@ -432,7 +437,39 @@ namespace CodeGenerator.CecilCodeGenerator
                 cecilField.HasConstant = true;
             }
 
+            var newArray = new byte[fieldDefinition.InitialValue.Length];
+            Array.Copy(fieldDefinition.InitialValue, newArray, newArray.Length);
+            cecilField.InitialValue = newArray;
+
+            if (newArray.Length > 0)
+                cecilField.Attributes |= Cecil.FieldAttributes.HasFieldRVA;
             return cecilField;
+        }
+        public void PropertyDefinitions(AnalysisNet.Types.TypeDefinition analysisNetType, Cecil.TypeDefinition cecilTypeDef)
+        {
+            foreach (var analysisNetProp in analysisNetType.PropertyDefinitions)
+            {
+                var cecilProp = new Cecil.PropertyDefinition(analysisNetProp.Name, 
+                    Cecil.PropertyAttributes.None, 
+                    ReferenceGenerator.TypeReference(analysisNetProp.PropertyType));
+
+                if (analysisNetProp.Getter != null)
+                {
+                    var getterDef = ReferenceGenerator.MethodReference(analysisNetProp.Getter).Resolve();
+                    cecilProp.GetMethod = getterDef;
+                }
+                if (analysisNetProp.Setter != null)
+                {
+                    var setterDef = ReferenceGenerator.MethodReference(analysisNetProp.Setter).Resolve();
+                    cecilProp.SetMethod = setterDef;
+                }
+
+                SetCustomAttributes(analysisNetProp.Attributes, cecilProp.CustomAttributes);
+
+                // Properties.Add sets this field
+                //cecilProp.DeclaringType = ReferenceGenerator.TypeReference(analysisNetType).Resolve();
+                cecilTypeDef.Properties.Add(cecilProp);
+            }
         }
     }
 }

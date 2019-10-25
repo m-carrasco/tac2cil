@@ -98,6 +98,9 @@ namespace CodeGenerator.CecilCodeGenerator
                         MethodGenerator methodGenerator = new MethodGenerator(referenceGen);
                         cecilTypeDef.Methods.Add(methodGenerator.MethodDefinition(analysisNetMethod));
                     }
+
+                    // we need to have every method definition created
+                    typeGenerator.PropertyDefinitions(analysisNetType, cecilTypeDef);
                 }
             }
         }

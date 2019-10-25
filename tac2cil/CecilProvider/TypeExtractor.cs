@@ -128,7 +128,8 @@ namespace CecilProvider
             var name = typedef.Name;
             var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ValueType, AnalysisNet.Types.TypeDefinitionKind.Enum);
             type.Base = ExtractType(typedef.BaseType) as AnalysisNet.Types.IBasicType;
-
+            type.IsAbstract = typedef.IsAbstract;
+            type.IsSealed = typedef.IsSealed;
             var valueField = typedef.Fields.Single(f => f.Name == "value__");
             type.UnderlayingType = ExtractType(valueField.FieldType) as AnalysisNet.Types.IBasicType;
 
@@ -148,8 +149,7 @@ namespace CecilProvider
                     continue;
 
                 var name = constdef.Name;
-                // Not sure if the type of the constant should be the enum type or the enum underlaying type.
-                var constant = new AnalysisNet.Types.FieldDefinition(name, containingType.UnderlayingType)
+                var constant = new AnalysisNet.Types.FieldDefinition(name, containingType)
                 {
                     Value = new AnalysisNet.ThreeAddressCode.Values.Constant(constdef.Constant)
                     {
@@ -162,16 +162,48 @@ namespace CecilProvider
             }
         }
 
+        // call after every method definition in analysisNetType is extracted
+        private void ExtractPropertyDefinitions(AnalysisNet.Types.TypeDefinition analysisNetType, Cecil.TypeDefinition cecilType)
+        {
+            foreach (var cecilProperty in cecilType.Properties)
+            {
+                var ourProp = new AnalysisNet.Types.PropertyDefinition(cecilProperty.Name, ExtractType(cecilProperty.PropertyType))
+                {
+                    ContainingType = analysisNetType
+                };
+
+                if (cecilProperty.GetMethod != null)
+                {
+                    // It is a reference but we need the definition.
+                    // It is not safe to call ResolvedMethod at this point, the model is incomplete.
+                    var getterRef = ExtractMethod(cecilProperty.GetMethod);
+                    ourProp.Getter = analysisNetType.Methods.Where(methodDef => methodDef.MatchSignature(getterRef)).First();
+                }
+                if (cecilProperty.SetMethod != null)
+                {
+                    // It is a reference but we need the definition.
+                    // It is not safe to call ResolvedMethod at this point, the model is incomplete.
+                    var setterRef = ExtractMethod(cecilProperty.SetMethod);
+                    ourProp.Setter = analysisNetType.Methods.Where(methodDef => methodDef.MatchSignature(setterRef)).First();
+                }
+
+                ExtractCustomAttributes(ourProp.Attributes, cecilProperty.CustomAttributes);
+                analysisNetType.PropertyDefinitions.Add(ourProp);
+            }
+        }
         private AnalysisNet.Types.TypeDefinition ExtractInterface(Cecil.TypeDefinition cecilType)
         {
             var name = UnmangleName(cecilType);
             var type = new AnalysisNet.Types.TypeDefinition(name, AnalysisNet.Types.TypeKind.ReferenceType, AnalysisNet.Types.TypeDefinitionKind.Interface);
 
+            type.IsAbstract = cecilType.IsAbstract;
+            type.IsSealed = cecilType.IsSealed;
+
             ExtractCustomAttributes(type.Attributes, cecilType.CustomAttributes);
             ExtractGenericTypeParameters(type, cecilType);
             ExtractInterfaces(type.Interfaces, cecilType.Interfaces);
             ExtractMethods(type, type.Methods, cecilType.Methods);
-
+            ExtractPropertyDefinitions(type, cecilType);
             return type;
         }
 
@@ -181,6 +213,9 @@ namespace CecilProvider
             var type = new AnalysisNet.Types.TypeDefinition(name, typeKind, typeDefinitionKind);
             var basedef = cecilType.BaseType;
 
+            type.IsAbstract = cecilType.IsAbstract;
+            type.IsSealed = cecilType.IsSealed;
+
             if (basedef != null)
                 type.Base = ExtractType(basedef) as AnalysisNet.Types.IBasicType;
 
@@ -189,9 +224,32 @@ namespace CecilProvider
             ExtractInterfaces(type.Interfaces, cecilType.Interfaces);
             ExtractFields(type, type.Fields, cecilType.Fields);
             ExtractMethods(type, type.Methods, cecilType.Methods);
-
+            ExtractPropertyDefinitions(type, cecilType);
             ExtractExplicitMethodOverrides(type, cecilType);
+            ExtractLayoutInformation(type, cecilType);
+
             return type;
+        }
+
+        private void ExtractLayoutInformation(AnalysisNet.Types.TypeDefinition type, Cecil.TypeDefinition typeDefinition)
+        {
+            AnalysisNet.Types.LayoutKind kind;
+            if (typeDefinition.IsAutoLayout)
+                kind = AnalysisNet.Types.LayoutKind.AutoLayout;
+            else if (typeDefinition.IsExplicitLayout)
+                kind = AnalysisNet.Types.LayoutKind.ExplicitLayout;
+            else if (typeDefinition.IsSequentialLayout)
+                kind = AnalysisNet.Types.LayoutKind.SequentialLayout;
+            else
+                throw new NotImplementedException();
+
+            Model.Types.LayoutInformation layoutInformation = new AnalysisNet.Types.LayoutInformation(kind)
+            {
+                ClassSize = typeDefinition.ClassSize,
+                PackingSize = typeDefinition.PackingSize
+            };
+
+            type.LayoutInformation = layoutInformation;
         }
 
         private void ExtractExplicitMethodOverrides(AnalysisNet.Types.TypeDefinition type, Cecil.TypeDefinition typeDefinition)
@@ -217,6 +275,10 @@ namespace CecilProvider
                 var name = fielddef.Name;
                 var type = ExtractType(fielddef.FieldType);
                 var field = new AnalysisNet.Types.FieldDefinition(name, type);
+
+                var newArray = new byte[fielddef.InitialValue.Length];
+                Array.Copy(fielddef.InitialValue, newArray, newArray.Length);
+                field.InitialValue = newArray;
 
                 ExtractCustomAttributes(field.Attributes, fielddef.CustomAttributes);
 
