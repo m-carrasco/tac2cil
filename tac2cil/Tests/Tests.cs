@@ -202,7 +202,7 @@ namespace Tests
             TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
         }
 
-        [Test, Explicit]
+        [Test]
         public void TestCompileDSAWithCecilProvider()
         {
             Model.Host host = new Model.Host();
