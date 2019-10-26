@@ -232,7 +232,7 @@ namespace Tests
             File.Copy(resourceDSANUnit, dsaNUnit);
 
             // execute nunit test suite
-            var autoRun = new NUnitLite.AutoRun(System.Reflection.Assembly.LoadFile(dsaNUnit));
+            var autoRun = new NUnitLite.AutoRun(System.Reflection.Assembly.LoadFrom(dsaNUnit));
             var outputTxt = Path.Combine(tempDir, "output.txt");
             var outputCmd = "--out=" + outputTxt ;
             autoRun.Execute(new string[1] { outputCmd });
