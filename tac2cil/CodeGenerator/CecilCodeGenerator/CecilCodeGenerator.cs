@@ -110,7 +110,8 @@ namespace CodeGenerator.CecilCodeGenerator
 
             foreach (var assembly in assemblies)
             {
-                assembly.Write(Path.Combine(pathToFolder, assembly.Name.Name));
+                var name = assembly.Name.Name + (assembly.MainModule.Kind == ModuleKind.Dll ? ".dll" : ".exe");
+                assembly.Write(Path.Combine(pathToFolder, name));
             }
         }
     }
