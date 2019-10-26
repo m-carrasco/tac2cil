@@ -44,6 +44,9 @@
     <Reference Include="nunit.framework, Version=3.12.0.0, Culture=neutral, PublicKeyToken=2638cd05610744eb, processorArchitecture=MSIL">
       <HintPath>..\packages\NUnit.3.12.0\lib\net45\nunit.framework.dll</HintPath>
     </Reference>
+    <Reference Include="nunitlite, Version=3.12.0.0, Culture=neutral, PublicKeyToken=2638cd05610744eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\NUnitLite.3.12.0\lib\net45\nunitlite.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
@@ -79,7 +82,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources\ObjectInitObjectFields.cs" />
     <EmbeddedResource Include="Resources\AccessIntField.cs" />
     <EmbeddedResource Include="Resources\Sum.cs" />
     <EmbeddedResource Include="Resources\RefParameter.cs" />
@@ -103,6 +105,7 @@
     <EmbeddedResource Include="Resources\Struct.cs" />
     <EmbeddedResource Include="Resources\InOutParameters2.cs" />
     <EmbeddedResource Include="Resources\Arrays2.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />
@@ -133,10 +136,6 @@
       <Project>{f08216ad-e55c-44b1-a253-ab8b024b7597}</Project>
       <Name>Model</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\DSA\DSA\DSANetFramework\DSANetFramework.csproj">
-      <Project>{b356f062-649d-4d9f-b39d-68915c93b7e9}</Project>
-      <Name>DSANetFramework</Name>
-    </ProjectReference>
     <ProjectReference Include="..\CecilProvider\CecilProvider.csproj">
       <Project>{5eb992f8-49aa-4308-a79f-84611a0a54a3}</Project>
       <Name>CecilProvider</Name>
@@ -149,6 +148,21 @@
       <Project>{cf297740-84f5-4b92-aa68-d74b9360776b}</Project>
       <Name>tac2cil</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="Resources\DSA\Library\DSA.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\DSA\Library\DSA.pdb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\DSA\NUnit\DSANUnitTests.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\DSA\NUnit\DSANUnitTests.pdb">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

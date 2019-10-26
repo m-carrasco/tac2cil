@@ -1,25 +1,17 @@
 ﻿using NUnit.Framework;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 
 namespace Tests
 {
     public class Tests
     {
-        public string GetTestSourceCode(string res)
+        public string GetResourceAsString(string res)
         {
             var sourceStream = System.Reflection.Assembly.GetAssembly(typeof(Tests)).GetManifestResourceStream(res);
             System.IO.StreamReader streamReader = new System.IO.StreamReader(sourceStream);
             var source = streamReader.ReadToEnd();
             return source;
-        }
-
-        [TestCase("Tests.Resources.ObjectInitObjectFields.cs", "Test.Program", "Test", null, false, ProviderType.CCI)]
-        public void TestNoCrash(string sourceCodeResource, string type, string method, object[] parameters, bool useTac, ProviderType providerType)
-        {
-            var source = GetTestSourceCode(sourceCodeResource);
-            TestHandler testHandler = new TestHandler();
-            testHandler.Test(source, type, method, parameters, useTac, providerType);
         }
 
         private static readonly string[] TestReturnValueSeeds =
@@ -173,7 +165,7 @@ namespace Tests
             string type = resourceToTest[1];
             string method = resourceToTest[2];
 
-            var source = GetTestSourceCode(sourceCodeResource);
+            var source = GetResourceAsString(sourceCodeResource);
             TestHandler testHandler = new TestHandler();
             object[] param = parameters == null ? null : new object[1] { parameters };
 
@@ -202,44 +194,55 @@ namespace Tests
             TestReturnValue(testSeed, parameters, ProviderType.METADATA, false);
         }
 
-		[Test, Sequential]
-		public void TestCecilProvider(
-		[ValueSource("TestReturnValueSeeds")] string testSeed,
-		[ValueSource("TestReturnValueParameters")] object parameters)
-		{
-			TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
-		}
-
-        [Test, Ignore("bug in cci provider")]
-        public void TestCompileDSA()
+        [Test, Sequential]
+        public void TestCecilProvider(
+        [ValueSource("TestReturnValueSeeds")] string testSeed,
+        [ValueSource("TestReturnValueParameters")] object parameters)
         {
-            Model.Host host = new Model.Host();
-            Model.ILoader provider = new CCIProvider.Loader(host);
-
-            string dsaPath = System.Reflection.Assembly.GetAssembly(typeof(DSA.Algorithms.Sorting.BubbleSorter)).Location;
-            provider.LoadAssembly(dsaPath);
-
-            CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
-            string outputDir = Utils.GetTemporaryDirectory();
-            exporter.WriteAssemblies(outputDir);
+            TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
         }
 
-		[Test, Ignore("")]
-		public void TestCompileDSAWithCecilProvider()
-		{
-			Model.Host host = new Model.Host();
-			Model.ILoader provider = new CecilProvider.Loader(host);
+        [Test, Explicit]
+        public void TestCompileDSAWithCecilProvider()
+        {
+            Model.Host host = new Model.Host();
+            Model.ILoader provider = new CecilProvider.Loader(host);
+            var buildDir =
+                Path.GetDirectoryName(System.Reflection.Assembly.GetAssembly(typeof(CecilProvider.Loader))
+                    .Location);
 
-			string dsaPath = System.Reflection.Assembly.GetAssembly(typeof(DSA.Algorithms.Sorting.BubbleSorter)).Location;
-			provider.LoadAssembly(dsaPath);
+            // create temporary directory where we place generated dlls
+            var tempDir = Utils.GetTemporaryDirectory();
 
-			CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
-			string outputDir = Utils.GetTemporaryDirectory();
-			exporter.WriteAssemblies(outputDir);
-		}
+            // sanity check for needed libraries
+            // resourceDSALibrary is the library that is going to be processed
+            // resourceDSANUnit has test cases for the DSA library
+            var resourceDSALibrary = Path.Combine(buildDir, "Resources/DSA/Library/DSA.dll");
+            var resourceDSANUnit = Path.Combine(buildDir, "Resources/DSA/NUnit/DSANUnitTests.dll");
+            if (!File.Exists(resourceDSALibrary) || !File.Exists((resourceDSANUnit)))
+                throw new FileNotFoundException();
 
+            // read the DSA library and re compile it using our framework
+            provider.LoadAssembly(resourceDSALibrary);
+            CodeGenerator.CecilCodeGenerator.CecilCodeGenerator exporter = new CodeGenerator.CecilCodeGenerator.CecilCodeGenerator(host);
+            exporter.WriteAssemblies(tempDir);
 
-		private bool IgnoreInMetadataProvider(string testSeed)
+            // copy nunit test library to temp dir
+            var dsaNUnit = Path.Combine(tempDir, "DSANUnitTests.dll");
+            File.Copy(resourceDSANUnit, dsaNUnit);
+
+            // execute nunit test suite
+            var autoRun = new NUnitLite.AutoRun(System.Reflection.Assembly.LoadFile(dsaNUnit));
+            var outputTxt = Path.Combine(tempDir, "output.txt");
+            var outputCmd = "--out=" + outputTxt ;
+            autoRun.Execute(new string[1] { outputCmd });
+
+            // check results
+            var output = File.ReadAllText(outputTxt);
+            Assert.IsTrue(output.Contains("Test Count: 618, Passed: 618"));
+        }
+
+        private bool IgnoreInMetadataProvider(string testSeed)
         {
             HashSet<string> ignore = new HashSet<string>()
             {
@@ -251,9 +254,9 @@ namespace Tests
                 TestReturnValueSeeds[26],
                 TestReturnValueSeeds[33],
                 TestReturnValueSeeds[34],
-				TestReturnValueSeeds[35],
-				TestReturnValueSeeds[36],
-			};
+                TestReturnValueSeeds[35],
+                TestReturnValueSeeds[36],
+            };
 
             if (ignore.Contains(testSeed))
                 return true;

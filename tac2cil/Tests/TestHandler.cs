@@ -82,6 +82,8 @@ namespace Tests
             string outputDir = Utils.GetTemporaryDirectory();
             exporter.WriteAssemblies(outputDir);
 
+            // hack: we are assuming it is always a .dll
+            output = output + ".dll";
             var DLL = System.Reflection.Assembly.LoadFile(Path.Combine(outputDir, Path.GetFileName(output)));
 
             Type type = DLL.GetType(typeName);
