@@ -13,7 +13,7 @@
 
 ## CodeProvider
 
-A *CodeProvider* loads a .NET binary and generate the code model of **analysis-net**. The code model is a set of classes that model entities of the metadata. In the code model, you can find classes modeling types, methods, and instructions. CIL instructions are translated to simplified bytecode instructions (SIL). SIL is an **analysis-net**'s set of stack-based instructions and is considerably smaller than CIL. 
+A *CodeProvider* loads a .NET binary and generates the code model of **analysis-net**. The code model is a set of classes that model entities of the metadata. In the code model, you can find classes modeling types, methods, and instructions. CIL instructions are translated to simplified bytecode instructions (SIL). SIL is an **analysis-net**'s set of stack-based instructions and is considerably smaller than CIL. 
 
 We developed a *CodeProvider* that uses Cecil to load the .NET binary and from there we create the **analysis-net**'s code model. There are two other *CodeProviders* implemented in **analysis-net**. 
 
