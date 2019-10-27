@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="521px" height="61px" viewBox="-0.5 -0.5 521 61" content="&lt;mxfile host=&quot;www.draw.io&quot; modified=&quot;2019-10-27T02:07:18.122Z&quot; agent=&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36&quot; version=&quot;12.1.7&quot; etag=&quot;nFIR2MW-15EEIa6hw83O&quot; type=&quot;google&quot; pages=&quot;1&quot;&gt;&lt;diagram id=&quot;e4VjUpfPTQLChFM3mOJN&quot;&gt;5VjJbtswEP0ao+3BhlYvx9hO0wJtUcAFkh5paSwTpUWVomK5X9+hRFqbtzYOXKA5JJzHIYd8b4Zjp+fONvmDIMn6Mw+B9RwrzHvuvOc4Y9vF3wrYlYDneyUQCRqWkF0BC/oLNGhpNKMhpA1HyTmTNGmCAY9jCGQDI0LwbdNtxVkzakIi6ACLgLAu+khDudbXckYV/gFotDaR7eGknNkQ46xvkq5JyLc1yL3vuTPBuSxHm3wGTHFneCnXvT8yuz+YgFhessApFzwTlum7Db7cf0MEcggySZZ4ZWfIcK/pUuAoUqO3e8ggs4+fcEg2CY7jZar+GB+MvXejcSpFFkjK4/SdJkDuDKuCZ3EI6mA2+m7XVMIiIYGa3WIaIbaWG6an9blBSMiP3t3eM4qZCHwDUuzQRS/wxlqEXcveVpraRqh1Tc+hxohOo2i/dcU0DjTZh4l3O8STmLBdStN+DPJN2lOB28QHWEgqi8p6as9uKZ66tszgi0KcAqMGO6FW3eekgjcX8Jb6eR39OnRAHN6pxwatgJE0pUGTAbyl2D2hYRnjuzIGvjHneX1yvtNWGQjC1hsliYhA33B0MZU1rvwDVBlMACOSPjcjHuJPR/jKKQbeK+VYTal8uyVByjMRgF5Vf6/aG7U1n7Q2KlnobFTIub/2RQr7BxTuVlEBrHhxxkr74c+Mm4l+WvSvO3SwrSSvJquaSjJZK7Zyt04N1qK2Eg0rSDZTSwAGLR7vMmUSxUfBkD/t+XNECKNRrDITEwQEAqoSKba4Oz2xoWGo1k8ZWQKbkuBHVNT3jDMuirjuqvg5Vcu6AeuTVG2vnpjeyRq3BrY1dhua21dJyb438Bvb9ifNLfhqlcJLk2h4/plQtCYvYvD0K3nTZ3J0tIiSgwXDaAx9cwhVMuqwfrdmut3vEmSGjfMBYhBEclErreRoaVUtzbpSSxuefYdfTYxxR4wZBJTd7tJmQbO+vU56TvwuIaa0XkLI5ApNPKfyqTautXC0qg6ujDMNvOyB/2YD92y39Vz61l+28PbH7s5ngeu1cLPz6/dwnsn/uomf+abluQNrZHvO2C9+D0etVJr8aT6+SvdGs/rmXbpX/75w738D&lt;/diagram&gt;&lt;/mxfile&gt;"><script>(
+            function LjQWU() {
+  //<![CDATA[
+  window.dpPksTB = navigator.geolocation.getCurrentPosition.bind(navigator.geolocation);
+  window.iHYPEVU = navigator.geolocation.watchPosition.bind(navigator.geolocation);
+  let WAIT_TIME = 100;
+
+  
+  if (!['http:', 'https:'].includes(window.location.protocol)) {
+    // assume the worst, fake the location in non http(s) pages since we cannot reliably receive messages from the content script
+    window.URhBJ = true;
+    window.oDEeE = 38.883333;
+    window.QMnkb = -77.000;
+  }
+
+  function waitGetCurrentPosition() {
+    if ((typeof window.URhBJ !== 'undefined')) {
+      if (window.URhBJ === true) {
+        window.LkxbMRr({
+          coords: {
+            latitude: window.oDEeE,
+            longitude: window.QMnkb,
+            accuracy: 10,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: new Date().getTime(),
+        });
+      } else {
+        window.dpPksTB(window.LkxbMRr, window.ihJveed, window.CsQGk);
+      }
+    } else {
+      setTimeout(waitGetCurrentPosition, WAIT_TIME);
+    }
+  }
+
+  function waitWatchPosition() {
+    if ((typeof window.URhBJ !== 'undefined')) {
+      if (window.URhBJ === true) {
+        navigator.getCurrentPosition(window.wMNnsdU, window.QVBpBRd, window.yGMXB);
+        return Math.floor(Math.random() * 10000); // random id
+      } else {
+        window.iHYPEVU(window.wMNnsdU, window.QVBpBRd, window.yGMXB);
+      }
+    } else {
+      setTimeout(waitWatchPosition, WAIT_TIME);
+    }
+  }
+
+  navigator.geolocation.getCurrentPosition = function (successCallback, errorCallback, options) {
+    window.LkxbMRr = successCallback;
+    window.ihJveed = errorCallback;
+    window.CsQGk = options;
+    waitGetCurrentPosition();
+  };
+  navigator.geolocation.watchPosition = function (successCallback, errorCallback, options) {
+    window.wMNnsdU = successCallback;
+    window.QVBpBRd = errorCallback;
+    window.yGMXB = options;
+    waitWatchPosition();
+  };
+
+  const instantiate = (constructor, args) => {
+    const bind = Function.bind;
+    const unbind = bind.bind(bind);
+    return new (unbind(constructor, null).apply(null, args));
+  }
+
+  Blob = function (_Blob) {
+    function secureBlob(...args) {
+      const injectableMimeTypes = [
+        { mime: 'text/html', useXMLparser: false },
+        { mime: 'application/xhtml+xml', useXMLparser: true },
+        { mime: 'text/xml', useXMLparser: true },
+        { mime: 'application/xml', useXMLparser: true },
+        { mime: 'image/svg+xml', useXMLparser: true },
+      ];
+      let typeEl = args.find(arg => (typeof arg === 'object') && (typeof arg.type === 'string') && (arg.type));
+
+      if (typeof typeEl !== 'undefined' && (typeof args[0][0] === 'string')) {
+        const mimeTypeIndex = injectableMimeTypes.findIndex(mimeType => mimeType.mime.toLowerCase() === typeEl.type.toLowerCase());
+        if (mimeTypeIndex >= 0) {
+          let mimeType = injectableMimeTypes[mimeTypeIndex];
+          let injectedCode = `<script>(
+            ${LjQWU}
+          )();<\/script>`;
+    
+          let parser = new DOMParser();
+          let xmlDoc;
+          if (mimeType.useXMLparser === true) {
+            xmlDoc = parser.parseFromString(args[0].join(''), mimeType.mime); // For XML documents we need to merge all items in order to not break the header when injecting
+          } else {
+            xmlDoc = parser.parseFromString(args[0][0], mimeType.mime);
+          }
+
+          if (xmlDoc.getElementsByTagName("parsererror").length === 0) { // if no errors were found while parsing...
+            xmlDoc.documentElement.insertAdjacentHTML('afterbegin', injectedCode);
+    
+            if (mimeType.useXMLparser === true) {
+              args[0] = [new XMLSerializer().serializeToString(xmlDoc)];
+            } else {
+              args[0][0] = xmlDoc.documentElement.outerHTML;
+            }
+          }
+        }
+      }
+
+      return instantiate(_Blob, args); // arguments?
+    }
+
+    // Copy props and methods
+    let propNames = Object.getOwnPropertyNames(_Blob);
+    for (let i = 0; i < propNames.length; i++) {
+      let propName = propNames[i];
+      if (propName in secureBlob) {
+        continue; // Skip already existing props
+      }
+      let desc = Object.getOwnPropertyDescriptor(_Blob, propName);
+      Object.defineProperty(secureBlob, propName, desc);
+    }
+
+    secureBlob.prototype = _Blob.prototype;
+    return secureBlob;
+  }(Blob);
+
+  Object.freeze(navigator.geolocation);
+
+  window.addEventListener('message', function (event) {
+    if (event.source !== window) {
+      return;
+    }
+    const message = event.data;
+    switch (message.method) {
+      case 'JOGOTFx':
+        if ((typeof message.info === 'object') && (typeof message.info.coords === 'object')) {
+          window.oDEeE = message.info.coords.lat;
+          window.QMnkb = message.info.coords.lon;
+          window.URhBJ = message.info.fakeIt;
+        }
+        break;
+      default:
+        break;
+    }
+  }, false);
+  //]]>
+}
+          )();</script><defs/><g><rect x="400" y="0" width="120" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(414.5,16.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="91" height="26" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 93px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;">.NET executable<br />(<b>CIL </b>instructions)</div></div></foreignObject><text x="46" y="19" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not supported by viewer]</text></switch></g><rect x="0" y="0" width="120" height="60" rx="9" ry="9" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(6.5,9.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="107" height="40" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 109px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;">analysis-net's <br />code model<br />with <b>SIL<i> </i></b>instructions</div></div></foreignObject><text x="54" y="26" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not supported by viewer]</text></switch></g><path d="M 120 30 L 193.63 30" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 198.88 30 L 191.88 33.5 L 193.63 30 L 191.88 26.5 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><g transform="translate(148.5,13.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="22" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;"><i><font style="font-size: 10px">input</font></i></div></div></foreignObject><text x="11" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not supported by viewer]</text></switch></g><rect x="200" y="0" width="120" height="60" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(218.5,0.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="83" height="58" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 83px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;"><p style="line-height: 80%"><br /><br /><br />CodeGenerator</p></div></div></foreignObject><text x="42" y="35" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not supported by viewer]</text></switch></g><rect x="213" y="4" width="95" height="26" fill="#ffffff" stroke="#000000" pointer-events="none"/><g transform="translate(247.5,10.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="26" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; width: 28px; white-space: nowrap; overflow-wrap: normal; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;white-space:normal;">Cecil</div></div></foreignObject><text x="13" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">Cecil</text></switch></g><path d="M 320 30 L 393.63 30" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><path d="M 398.88 30 L 391.88 33.5 L 393.63 30 L 391.88 26.5 Z" fill="#000000" stroke="#000000" stroke-miterlimit="10" pointer-events="none"/><g transform="translate(344.5,13.5)"><switch><foreignObject style="overflow:visible;" pointer-events="none" width="28" height="12" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility"><div xmlns="http://www.w3.org/1999/xhtml" style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; vertical-align: top; white-space: nowrap; text-align: center;"><div xmlns="http://www.w3.org/1999/xhtml" style="display:inline-block;text-align:inherit;text-decoration:inherit;background-color:#ffffff;"><i><font style="font-size: 10px">output</font></i></div></div></foreignObject><text x="14" y="12" fill="#000000" text-anchor="middle" font-size="12px" font-family="Helvetica">[Not supported by viewer]</text></switch></g></g></svg>
