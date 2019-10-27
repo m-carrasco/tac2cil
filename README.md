@@ -17,9 +17,18 @@ A *CodeProvider* loads a .NET binary and generate the code model of **analysis-n
 
 We developed a *CodeProvider* that uses Cecil to load the .NET binary and from there we create the **analysis-net**'s code model. There are two other *CodeProviders* implemented in **analysis-net**. 
 
+<p align="center">
+<img src="/images/cil2sil.svg">
+</p>
+
+
 ## CodeGenerator
 
 A *CodeGenerator* takes an **analysis-net**'s code model instance with SIL instructions and generates a semantically equivalent .NET binary. We decided to implement a *CodeGenerator* backended by Cecil. In particular, this *CodeGenerator* takes analysis-net's code model and generates an equivalent model in Cecil. Then, Cecil generates the assembly.
+
+<p align="center">
+<img src="/images/sil2cil.svg">
+</p>
 
 # Status
 
