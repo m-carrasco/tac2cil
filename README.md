@@ -9,6 +9,18 @@
 <img src="/images/flow.svg">
 </p>
 
+# Components
+
+## CodeProvider
+
+A *CodeProvider* loads a .NET binary and generate the code model of **analysis-net**. The code model is a set of classes that model entities of the metadata. In the code model, you can find classes modeling types, methods, and instructions. CIL instructions are translated to simplified bytecode instructions (SIL). SIL is an **analysis-net**'s set of stack-based instructions and is considerably smaller than CIL. 
+
+We developed a *CodeProvider* that uses Cecil to load the .NET binary and from there we create the **analysis-net**'s code model. There are two other *CodeProviders* implemented in **analysis-net**. 
+
+## CodeGenerator
+
+A *CodeGenerator* takes an **analysis-net**'s code model instance with SIL instructions and generates a semantically equivalent .NET binary. We decided to implement a *CodeGenerator* backended by Cecil. In particular, this *CodeGenerator* takes analysis-net's code model and generates an equivalent model in Cecil. Then, Cecil generates the assembly.
+
 # Status
 
 |master| [![Build Status](https://travis-ci.com/m7nu3l/tac2cil.svg?token=f7qzBQCoptr4sx6YDGWa&branch=master)](https://travis-ci.com/m7nu3l/tac2cil) |
