@@ -76,16 +76,16 @@ namespace CecilProvider
     internal class CodeProvider
     {
         private TypeExtractor typeExtractor;
-        private IDictionary<Cecil.ParameterDefinition, AnalysisNetTac.Values.IVariable> parameters;
-        private IDictionary<Cecil.Cil.VariableDefinition, AnalysisNetTac.Values.IVariable> locals;
+        private IDictionary<int, AnalysisNetTac.Values.IVariable> parameters;
+        private IDictionary<int, AnalysisNetTac.Values.IVariable> locals;
         private AnalysisNetTac.Values.IVariable thisParameter;
 
         private Cecil.Cil.MethodBody cecilBody;
         public CodeProvider(TypeExtractor typeExtractor)
         {
             this.typeExtractor = typeExtractor;
-            this.parameters = new Dictionary<Cecil.ParameterDefinition, AnalysisNetTac.Values.IVariable>();
-            this.locals = new Dictionary<Cecil.Cil.VariableDefinition, AnalysisNetTac.Values.IVariable>();
+            this.parameters = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
+            this.locals = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
         }
         
         public AnalysisNet.Types.MethodBody ExtractBody(Cecil.Cil.MethodBody cciBody)
@@ -106,8 +106,7 @@ namespace CecilProvider
         {
             if (!methoddef.IsStatic)
             {
-                //var isByReference = methoddef.DeclaringType.IsValueType;
-                var type = typeExtractor.ExtractType(methoddef.DeclaringType);//typeExtractor.ExtractType(methoddef.DeclaringType, isByReference);
+                var type = typeExtractor.ExtractType(methoddef.DeclaringType);
                 var v = new AnalysisNetTac.Values.LocalVariable("this", true) { Type = type };
 
                 ourParameters.Add(v);
@@ -116,12 +115,11 @@ namespace CecilProvider
 
             foreach (var parameter in methoddef.Parameters)
             {
-                //var type = typeExtractor.ExtractType(parameter.ParameterType, parameter.IsByReference);
                 var type = typeExtractor.ExtractType(parameter.ParameterType);
                 var v = new AnalysisNetTac.Values.LocalVariable(parameter.Name, true) { Type = type };
 
                 ourParameters.Add(v);
-                parameters.Add(parameter, v);
+                parameters.Add(parameter.Index, v);
             }
         }
 
@@ -130,12 +128,11 @@ namespace CecilProvider
             foreach (var local in cciLocalVariables)
             {
                 var name = GetLocalSourceName(local);
-                //var type = typeExtractor.ExtractType(local.VariableType, local);
                 var type = typeExtractor.ExtractType(local.VariableType);
                 var v = new AnalysisNetTac.Values.LocalVariable(name) { Type = type };
 
                 ourLocalVariables.Add(v);
-                locals.Add(local, v);
+                locals.Add(local.Index, v);
             }
         }
 
@@ -607,20 +604,12 @@ namespace CecilProvider
 
         private AnalysisNet.IInstruction ProcessLoadArrayElement(Cecil.Cil.Instruction op, AnalysisNetBytecode.LoadArrayElementOperation operation, AnalysisNet.Types.ArrayType arrayType = null)
         {
-            //if (arrayType == null)
-            //{
-            //    AnalysisNet.Types.IType elementType =  OperationHelper.GetOperationType(op.OpCode.Code);
-            //    arrayType = new AnalysisNet.Types.ArrayType(elementType);
-            //}
             var instruction = new AnalysisNetBytecode.LoadArrayElementInstruction((uint)op.Offset, operation, arrayType);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessStoreArrayElement(Cecil.Cil.Instruction op, AnalysisNet.Types.ArrayType arrayType)
         {
-            //if (arrayType == null)
-            //    arrayType = new AnalysisNet.Types.ArrayType(OperationHelper.GetOperationType(op.Opcode));
-
             var instruction = new AnalysisNetBytecode.StoreArrayElementInstruction((uint)op.Offset, arrayType);
             return instruction;
         }
@@ -701,10 +690,6 @@ namespace CecilProvider
             var ourArrayType = typeExtractor.ExtractType(cciArrayType) as AnalysisNet.Types.ArrayType;
 
             return CreateArray((uint)op.Offset, ourArrayType);
-            //OperationHelper.CreateArrayWithLowerBounds(op.OpCode.Code);
-            //var instruction = new AnalysisNetBytecode.CreateArrayInstruction((uint)op.Offset, ourArrayType);
-            //instruction.WithLowerBound = withLowerBound;
-            //return instruction;
         }
         private AnalysisNet.IInstruction CreateArray(uint offset, AnalysisNet.Types.ArrayType arrayType, bool withLowerBound = false)
         {
@@ -758,7 +743,7 @@ namespace CecilProvider
 
         private AnalysisNet.IInstruction ProcessMethodCallIndirect(Cecil.Cil.Instruction op)
         {
-            var cciFunctionPointer = op.Operand as Cecil.FunctionPointerType;//Cci.IFunctionPointerTypeReference;
+            var cciFunctionPointer = op.Operand as Cecil.FunctionPointerType;
             var ourFunctionPointer = typeExtractor.ExtractType(cciFunctionPointer) as AnalysisNet.Types.FunctionPointerType;
 
             var instruction = new AnalysisNetBytecode.IndirectMethodCallInstruction((uint)op.Offset, ourFunctionPointer);
@@ -840,18 +825,14 @@ namespace CecilProvider
                 else
                 {
                     var hasThis = thisParameter != null ? 1 : 0;
-                    // inefficient
-                    source = parameters.Where(kv => kv.Key.Index == argIdx - hasThis).First().Value;
+                    source = parameters[argIdx - hasThis];
                 }
-
             }
             
-            //if (op.Operand is Cci.IParameterDefinition)
             if (op.Operand is Cecil.ParameterDefinition)
             {
-                //var parameter = op.Operand as Cci.IParameterDefinition;
                 var parameter = op.Operand as Cecil.ParameterDefinition;
-                source = parameters[parameter];
+                source = parameters[parameter.Index];
             }
 
             if (source == null)
@@ -876,15 +857,15 @@ namespace CecilProvider
                 case Mono.Cecil.Cil.Code.Ldloc_S:
                 case Mono.Cecil.Cil.Code.Ldloca_S:
                 case Mono.Cecil.Cil.Code.Ldloc:
-                case Mono.Cecil.Cil.Code.Ldloca: source = locals[(Cecil.Cil.VariableDefinition)op.Operand]; break;
+                case Mono.Cecil.Cil.Code.Ldloca:
+                    Cecil.Cil.VariableDefinition varDef = (Cecil.Cil.VariableDefinition)op.Operand;
+                    source = locals[varDef.Index]; break;
                 default:
                     throw new NotImplementedException();
             }
 
             if (localIdx > -1)
-                source = locals.Where(kv => kv.Key.Index == localIdx).First().Value;
-            //var local = op.Operand as Cecil.Cil.VariableDefinition;
-            //var source = locals[local];
+                source = locals[localIdx];
 
             var instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
             return instruction;
@@ -933,11 +914,9 @@ namespace CecilProvider
         {
             var dest = thisParameter;
 
-            //if (op.Operand is Cci.IParameterDefinition)
             if (op.Operand is Cecil.ParameterDefinition parameter)
             {
-                //var parameter = op.Operand as Cci.IParameterDefinition;
-                dest = parameters[parameter];
+                dest = parameters[parameter.Index];
             }
 
             var instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
@@ -962,12 +941,9 @@ namespace CecilProvider
 
             AnalysisNetTac.Values.IVariable dest;
             if (variable != null)
-                dest = locals[variable];
+                dest = locals[variable.Index];
             else
-                dest = locals.Where(kv => kv.Key.Index == localIdx).First().Value;
-
-            //var local = op.Operand as Cecil.Cil.VariableDefinition;
-            //var dest = locals[local];
+                dest = locals[localIdx];
 
             var instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
             return instruction;
