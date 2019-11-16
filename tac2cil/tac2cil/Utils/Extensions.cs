@@ -29,6 +29,18 @@ namespace tac2cil
             }
         }
 
+        public static Bytecode.BasicOperation ToUnaryOperation(this TacInstructions.UnaryOperation operation)
+        {
+            switch (operation)
+            {
+                case TacInstructions.UnaryOperation.Neg: return Bytecode.BasicOperation.Neg;
+                case TacInstructions.UnaryOperation.Not: return Bytecode.BasicOperation.Not;
+
+                default: throw new NotImplementedException();
+            }
+        }
+
+
         public static void AddRange<T>(this IList<T> t, IList<T> x)
         {
             foreach (var elem in x)
