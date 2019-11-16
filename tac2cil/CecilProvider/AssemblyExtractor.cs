@@ -36,16 +36,21 @@ namespace CecilProvider
             };
             namespaces[String.Empty] = assembly.RootNamespace;
 
+            // re use the same object because it contains a cache inside
+            // but be sure typeExtractor is not referenced forever
+            // otherwise we would not dipose cecil code model
+            TypeExtractor typeExtractor = new TypeExtractor(host);
+
             // if cecilType is a nested type, we guarantee that we have already visited its declaring type
             foreach (var cecilType in module.TraverseTypes())
-                ExtractTypeDefinition(cecilType, assembly);
+                ExtractTypeDefinition(cecilType, assembly, typeExtractor);
             
             return assembly;
         }
 
         // the extracted type is added to the expected namespace
         // if cecilType is a nested type, we guarantee that we have already visited its declaring type
-        private void ExtractTypeDefinition(Cecil.TypeDefinition cecilType, AnalysisNet.Assembly assembly)
+        private void ExtractTypeDefinition(Cecil.TypeDefinition cecilType, AnalysisNet.Assembly assembly, TypeExtractor typeExtractor)
         {
             // afaik it is not necessary to generate this class
             // for instance cci does not even load it although cecil does 
@@ -53,7 +58,6 @@ namespace CecilProvider
                 cecilType.BaseType == null)
                 return;
 
-            TypeExtractor typeExtractor = new TypeExtractor(host);
             var extractedType = typeExtractor.ExtractTypeDefinition(cecilType);
             typeDefinitions[cecilType] = extractedType;
 
@@ -76,8 +80,6 @@ namespace CecilProvider
                 extractedType.ContainingNamespace = ns;
                 ns.Types.Add(extractedType);
             }
-
-            //throw new NotImplementedException();
         }
 
         private IEnumerable<AnalysisNet.IAssemblyReference> ExtractAssemblyReferences()

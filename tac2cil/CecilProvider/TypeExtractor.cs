@@ -5,10 +5,11 @@ using System.Text;
 using Cecil = Mono.Cecil;
 using AnalysisNet = Model;
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 
 namespace CecilProvider
 {
-
     class TypeExtractor
     {
         class GenericParameterExtractor
@@ -73,14 +74,18 @@ namespace CecilProvider
                 return map[cecilParameter.Position];
             }
         }
-        private AnalysisNet.Host host;
-        private GenericParameterExtractor genericParameterExtractor;
+        private readonly AnalysisNet.Host host;
+        private readonly MemoryCache performanceCache;
         // usted to prevent infinite recursion while creating generic parameter references
+        private GenericParameterExtractor genericParameterExtractor;
 
         public TypeExtractor(AnalysisNet.Host host)
         {
             this.host = host;
             this.genericParameterExtractor = new GenericParameterExtractor(this);
+
+            IOptions<MemoryCacheOptions> optionsAccessor = new MemoryCacheOptions();
+            this.performanceCache = new MemoryCache(optionsAccessor);
         }
 
         private bool IsDelegate(Cecil.TypeDefinition cecilType)
@@ -290,10 +295,13 @@ namespace CecilProvider
         }
         public AnalysisNet.Types.FieldReference ExtractField(Cecil.FieldReference field, bool isStatic)
         {
-            var analysisNetField = new AnalysisNet.Types.FieldReference(field.Name, ExtractType(field.FieldType));
-            analysisNetField.ContainingType = (AnalysisNet.Types.IBasicType)ExtractType(field.DeclaringType);
-            analysisNetField.IsStatic = isStatic;
-            return analysisNetField;
+            (Cecil.FieldReference, bool) key = ValueTuple.Create(field, isStatic);
+            return performanceCache.GetOrCreate(key, (cacheEntry) => {
+                var analysisNetField = new AnalysisNet.Types.FieldReference(field.Name, ExtractType(field.FieldType));
+                analysisNetField.ContainingType = (AnalysisNet.Types.IBasicType)ExtractType(field.DeclaringType);
+                analysisNetField.IsStatic = isStatic;
+                return analysisNetField;
+            });
         }
         private AnalysisNet.Types.VisibilityKind ExtractVisibilityKind(Cecil.FieldReference field)
         {
@@ -369,8 +377,6 @@ namespace CecilProvider
             var elements = ExtractType(typeref.ElementType);
             var type = new AnalysisNet.Types.ArrayType(elements, (uint)typeref.Rank);
 
-            //ExtractAttributes(type.Attributes, typeref.);
-
             return type;
         }
 
@@ -379,8 +385,6 @@ namespace CecilProvider
             var target = ExtractType(typeref.ElementType);
             var type = new AnalysisNet.Types.PointerType(target);
 
-            //ExtractAttributes(type.Attributes, typeref.Attributes);
-
             return type;
         }
         private AnalysisNet.Types.PointerType ExtractType(Cecil.PointerType typeref)
@@ -388,26 +392,11 @@ namespace CecilProvider
             var target = ExtractType(typeref.ElementType);
             var type = new AnalysisNet.Types.PointerType(target);
 
-            //ExtractAttributes(type.Attributes, typeref.Attributes);
-
             return type;
         }
 
         private AnalysisNet.Types.IGenericParameterReference ExtractType(Cecil.GenericParameter typeref)
         {
-            //var containingType = GetContainingType(typeref.DefiningType);
-            //var startIndex = TotalGenericParameterCount(containingType);
-            //var index = startIndex + typeref.Index;
-            //return genericContext.TypeParameters[index];
-
-            /*AnalysisNet.Types.GenericParameterKind kind = typeref.Type == Cecil.GenericParameterType.Type ? 
-                AnalysisNet.Types.GenericParameterKind.Type : AnalysisNet.Types.GenericParameterKind.Method;
-
-            AnalysisNet.Types.GenericParameterReference genericParameterReference = new AnalysisNet.Types.GenericParameterReference(kind, (ushort)typeref.Position);
-            genericParameterReference.GenericContainer = ExtractOwner(typeref.Owner);
-
-            ExtractCustomAttributes(genericParameterReference.Attributes, typeref.CustomAttributes);*/
-
             return genericParameterExtractor.GetGenericParameter(typeref);
         }
 
@@ -541,66 +530,66 @@ namespace CecilProvider
 
         private AnalysisNet.Types.IType ExtractType(Cecil.GenericInstanceType typeref)
         {
-            var genericTyperef = typeref.ElementType;
-
-            // cuidado si cacheamos porque aca estariamos modificando algo del cache
-            var instancedType = (AnalysisNet.Types.BasicType)ExtractType(genericTyperef);
-            var genericType = (AnalysisNet.Types.IBasicType)ExtractType(genericTyperef);
-            instancedType.GenericType = genericType;
-
-            foreach (var argumentref in typeref.GenericArguments)
-            {
-                var typearg = ExtractType(argumentref);
-                instancedType.GenericArguments.Add(typearg);
-            }
+            var genericTyperef = (AnalysisNet.Types.BasicType)ExtractType(typeref.ElementType);
+            var arguments = typeref.GenericArguments.Select(argumentref => ExtractType(argumentref)).ToArray();
+            var instancedType = AnalysisNet.Extensions.Instantiate(genericTyperef, arguments);
+            instancedType.Resolve(host);
 
             return instancedType;
         }
 
         public AnalysisNet.Types.IType ExtractType(Cecil.TypeReference typeReference)
         {
-            AnalysisNet.Types.IType result = null;
+            return performanceCache.GetOrCreate(typeReference, (cacheEntry) =>
+            {
+                AnalysisNet.Types.IType result = null;
 
-            if (typeReference is Cecil.ArrayType arrayType)
-            {
-                result = ExtractType(arrayType);
-            } else if (typeReference is Cecil.ByReferenceType byReferenceType)
-            {
-                result = ExtractType(byReferenceType);
-            } else if (typeReference is Cecil.PointerType pointerType)
-            {
-                result = ExtractType(pointerType);
-            } else if (typeReference is Cecil.GenericParameter genericParameterType)
-            {
-                result = ExtractType(genericParameterType);
-            } else if (typeReference is Cecil.FunctionPointerType functionPointerType)
-            {
-                result = ExtractType(functionPointerType);
-            } else if (typeReference is Cecil.GenericInstanceType genericInstanceType)
-            {
-                result = ExtractType(genericInstanceType);
-            }
-            else
-            {
-                // named type reference
-                result = ExtractNonGenericInstanceType(typeReference);
-            }
-
-
-            if (result is AnalysisNet.Types.BasicType)
-            {
-                var basicType = result as AnalysisNet.Types.BasicType;
-                basicType.Resolve(host);
-
-                if (basicType.GenericType is AnalysisNet.Types.BasicType)
+                if (typeReference is Cecil.ArrayType arrayType)
                 {
-                    basicType = basicType.GenericType as AnalysisNet.Types.BasicType;
-                    basicType.Resolve(host);
+                    result = ExtractType(arrayType);
                 }
-            }
+                else if (typeReference is Cecil.ByReferenceType byReferenceType)
+                {
+                    result = ExtractType(byReferenceType);
+                }
+                else if (typeReference is Cecil.PointerType pointerType)
+                {
+                    result = ExtractType(pointerType);
+                }
+                else if (typeReference is Cecil.GenericParameter genericParameterType)
+                {
+                    result = ExtractType(genericParameterType);
+                }
+                else if (typeReference is Cecil.FunctionPointerType functionPointerType)
+                {
+                    result = ExtractType(functionPointerType);
+                }
+                else if (typeReference is Cecil.GenericInstanceType genericInstanceType)
+                {
+                    result = ExtractType(genericInstanceType);
+                }
+                else
+                {
+                    // named type reference
+                    result = ExtractNonGenericInstanceType(typeReference);
+                }
 
-            return result;
+                if (result is AnalysisNet.Types.BasicType)
+                {
+                    var basicType = result as AnalysisNet.Types.BasicType;
+                    basicType.Resolve(host);
+
+                    if (basicType.GenericType is AnalysisNet.Types.BasicType)
+                    {
+                        basicType = basicType.GenericType as AnalysisNet.Types.BasicType;
+                        basicType.Resolve(host);
+                    }
+                }
+
+                return result;
+            });
         }
+
         public AnalysisNet.Types.IMetadataReference ExtractToken(Cecil.MemberReference token)
         {
             AnalysisNet.Types.IMetadataReference result = AnalysisNet.Types.PlatformTypes.Unknown;
@@ -626,27 +615,27 @@ namespace CecilProvider
         }
         public AnalysisNet.Types.IMethodReference ExtractMethod(Cecil.MethodReference methodReference)
         {
-            if (methodReference is Cecil.GenericInstanceMethod instanceMethod)
+            return performanceCache.GetOrCreate(methodReference, (cacheEntry) =>
             {
-                var genericArguments = new List<AnalysisNet.Types.IType>();
-
-                foreach (var typeParameterref in instanceMethod.GenericArguments)
+                if (methodReference is Cecil.GenericInstanceMethod instanceMethod)
                 {
-                    var typeArgumentref = ExtractType(typeParameterref);
-                    genericArguments.Add(typeArgumentref);
+                    var genericArguments = new List<AnalysisNet.Types.IType>();
+
+                    foreach (var typeParameterref in instanceMethod.GenericArguments)
+                    {
+                        var typeArgumentref = ExtractType(typeParameterref);
+                        genericArguments.Add(typeArgumentref);
+                    }
+
+                    var method = ExtractMethod(instanceMethod.GetElementMethod());
+                    var instantiatedMethod = AnalysisNet.Extensions.Instantiate(method, genericArguments);
+                    instantiatedMethod.Resolve(host);
+
+                    return instantiatedMethod;
                 }
-
-                //CreateGenericParameterReferences(GenericParameterKind.Method, genericArguments.Count);
-
-                var method = ExtractMethod(instanceMethod.GetElementMethod());
-                var instantiatedMethod = AnalysisNet.Extensions.Instantiate(method, genericArguments);
-                instantiatedMethod.Resolve(host);
-
-                //BindGenericParameterReferences(GenericParameterKind.Method, instantiatedMethod);
-                return instantiatedMethod;
-            }
-            else
-                return ExtractNonGenericInstanceMethod(methodReference);
+                else
+                    return ExtractNonGenericInstanceMethod(methodReference);
+            });
         }
 
         private AnalysisNet.Types.IMethodReference ExtractNonGenericInstanceMethod(Cecil.MethodReference methodref)
