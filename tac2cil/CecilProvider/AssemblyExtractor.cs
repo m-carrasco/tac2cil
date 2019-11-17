@@ -1,40 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Cecil = Mono.Cecil;
-using AnalysisNet = Model;
+﻿using System.Collections.Generic;
 using System.Linq;
+using AnalysisNet = Model;
+using Cecil = Mono.Cecil;
 
 namespace CecilProvider
 {
-    class AssemblyExtractor
+    internal class AssemblyExtractor
     {
-        private Cecil.ModuleDefinition module;
-        private IDictionary<string, AnalysisNet.Namespace> namespaces;
-        private AnalysisNet.Host host;
-        private IDictionary<Cecil.TypeDefinition, AnalysisNet.Types.TypeDefinition> typeDefinitions;
+        private readonly Cecil.ModuleDefinition module;
+        private readonly IDictionary<string, AnalysisNet.Namespace> namespaces;
+        private readonly AnalysisNet.Host host;
+        private readonly IDictionary<Cecil.TypeDefinition, AnalysisNet.Types.TypeDefinition> typeDefinitions;
         public AssemblyExtractor(Cecil.ModuleDefinition module, AnalysisNet.Host host)
         {
             this.module = module;
-            this.namespaces = new Dictionary<string, AnalysisNet.Namespace>();
+            namespaces = new Dictionary<string, AnalysisNet.Namespace>();
             this.host = host;
-            this.typeDefinitions = new Dictionary<Cecil.TypeDefinition, AnalysisNet.Types.TypeDefinition>();
+            typeDefinitions = new Dictionary<Cecil.TypeDefinition, AnalysisNet.Types.TypeDefinition>();
         }
         public AnalysisNet.Assembly ExtractAssembly()
         {
             // create empty assembly
             AnalysisNet.Assembly assembly = new AnalysisNet.Assembly(module.Assembly.Name.Name);
-            
+
             // populate assembly references
             assembly.References.AddRange(ExtractAssemblyReferences());
 
             // create root namespace
             // every other namespace is created while processing each cecil type definition
-            assembly.RootNamespace = new AnalysisNet.Namespace(String.Empty)
+            assembly.RootNamespace = new AnalysisNet.Namespace(string.Empty)
             {
                 ContainingAssembly = new AnalysisNet.AssemblyReference(assembly.Name)
             };
-            namespaces[String.Empty] = assembly.RootNamespace;
+            namespaces[string.Empty] = assembly.RootNamespace;
 
             // re use the same object because it contains a cache inside
             // but be sure typeExtractor is not referenced forever
@@ -42,9 +40,11 @@ namespace CecilProvider
             TypeExtractor typeExtractor = new TypeExtractor(host);
 
             // if cecilType is a nested type, we guarantee that we have already visited its declaring type
-            foreach (var cecilType in module.TraverseTypes())
+            foreach (Cecil.TypeDefinition cecilType in module.TraverseTypes())
+            {
                 ExtractTypeDefinition(cecilType, assembly, typeExtractor);
-            
+            }
+
             return assembly;
         }
 
@@ -56,9 +56,11 @@ namespace CecilProvider
             // for instance cci does not even load it although cecil does 
             if (cecilType.Name.Equals("<Module>") &&
                 cecilType.BaseType == null)
+            {
                 return;
+            }
 
-            var extractedType = typeExtractor.ExtractTypeDefinition(cecilType);
+            AnalysisNet.Types.TypeDefinition extractedType = typeExtractor.ExtractTypeDefinition(cecilType);
             typeDefinitions[cecilType] = extractedType;
 
             extractedType.ContainingAssembly = assembly;
@@ -69,14 +71,14 @@ namespace CecilProvider
             // If the type is not nested then the processed type is added to its namespace directly
             if (cecilType.DeclaringType != null)
             {
-                var containingType = typeDefinitions[cecilType.DeclaringType];
+                AnalysisNet.Types.TypeDefinition containingType = typeDefinitions[cecilType.DeclaringType];
                 extractedType.ContainingType = containingType;
                 containingType.Types.Add(extractedType);
                 extractedType.ContainingNamespace = containingType.ContainingNamespace;
             }
             else
             {
-                var ns = GetOrCreateNamespace(cecilType.Namespace);
+                AnalysisNet.Namespace ns = GetOrCreateNamespace(cecilType.Namespace);
                 extractedType.ContainingNamespace = ns;
                 ns.Types.Add(extractedType);
             }
@@ -84,14 +86,17 @@ namespace CecilProvider
 
         private IEnumerable<AnalysisNet.IAssemblyReference> ExtractAssemblyReferences()
         {
-            var cecilReferences = module.AssemblyReferences;
-            var result = cecilReferences.Select(r => new AnalysisNet.AssemblyReference(r.Name));
+            Mono.Collections.Generic.Collection<Cecil.AssemblyNameReference> cecilReferences = module.AssemblyReferences;
+            IEnumerable<AnalysisNet.AssemblyReference> result = cecilReferences.Select(r => new AnalysisNet.AssemblyReference(r.Name));
             return result;
         }
 
-        private AnalysisNet.Namespace GetOrCreateNamespace(string nsFullName){
+        private AnalysisNet.Namespace GetOrCreateNamespace(string nsFullName)
+        {
             if (namespaces.TryGetValue(nsFullName, out AnalysisNet.Namespace res))
+            {
                 return res;
+            }
 
             AnalysisNet.Namespace currentNamespace;
 
@@ -106,13 +111,15 @@ namespace CecilProvider
             }
             else
             {
-                parentFullName = String.Empty;
+                parentFullName = string.Empty;
                 currentName = nsFullName;
             }
 
             AnalysisNet.Namespace parentNamespace = GetOrCreateNamespace(parentFullName);
-            currentNamespace = new AnalysisNet.Namespace(currentName);
-            currentNamespace.ContainingNamespace = parentNamespace;
+            currentNamespace = new AnalysisNet.Namespace(currentName)
+            {
+                ContainingNamespace = parentNamespace
+            };
             parentNamespace.Namespaces.Add(currentNamespace);
 
             namespaces[nsFullName] = currentNamespace;

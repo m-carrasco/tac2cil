@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using tac2cil.Assembler;
 
 namespace Tests
@@ -16,40 +14,50 @@ namespace Tests
         METADATA,
         CECIL
     }
-    class TestHandler
+
+    internal class TestHandler
     {
         public ILoader CreateProvider(ProviderType type, Host host)
         {
             if (type == ProviderType.CCI)
+            {
                 return new CCIProvider.Loader(host);
+            }
+
             if (type == ProviderType.CECIL)
+            {
                 return new CecilProvider.Loader(host);
+            }
+
             if (type == ProviderType.METADATA)
+            {
                 return new MetadataProvider.Loader(host);
+            }
+
             return null;
         }
 
-        public Object RunOriginalCode(string source, string typeName, string method, object[] parameters)
+        public object RunOriginalCode(string source, string typeName, string method, object[] parameters)
         {
             Compiler compiler = new Compiler();
-            var output = compiler.CompileSource(source);
-            var DLL = System.Reflection.Assembly.LoadFile(output);
+            string output = compiler.CompileSource(source);
+            System.Reflection.Assembly DLL = System.Reflection.Assembly.LoadFile(output);
             Type type = DLL.GetType(typeName);
-            var methodInfoStatic = type.GetMethod(method);
+            System.Reflection.MethodInfo methodInfoStatic = type.GetMethod(method);
             if (methodInfoStatic == null)
             {
                 throw new Exception("No such static method exists.");
             }
 
             // Invoke static method
-            Object result = methodInfoStatic.Invoke(null, parameters);
+            object result = methodInfoStatic.Invoke(null, parameters);
             return result;
         }
 
-        public Object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, ProviderType providerType)
+        public object Test(string source, string typeName, string method, object[] parameters, bool convertToTac, ProviderType providerType)
         {
             Compiler compiler = new Compiler();
-            var output = compiler.CompileSource(source);
+            string output = compiler.CompileSource(source);
 
             Host host = new Host();
             ILoader provider = CreateProvider(providerType, host);
@@ -58,13 +66,13 @@ namespace Tests
 
             if (convertToTac)
             {
-                var allDefinedMethods = from a in host.Assemblies
-                                        from t in a.RootNamespace.GetAllTypes()
-                                        from m in t.Members.OfType<MethodDefinition>()
-                                        where m.HasBody
-                                        select m;
+                IEnumerable<MethodDefinition> allDefinedMethods = from a in host.Assemblies
+                                                                  from t in a.RootNamespace.GetAllTypes()
+                                                                  from m in t.Members.OfType<MethodDefinition>()
+                                                                  where m.HasBody
+                                                                  select m;
 
-                foreach (var definedMethod in allDefinedMethods)
+                foreach (MethodDefinition definedMethod in allDefinedMethods)
                 {
                     MethodDefinition mainMethod = definedMethod;
                     MethodBody originalBytecodeBody = mainMethod.Body;
@@ -72,7 +80,7 @@ namespace Tests
                     originalBytecodeBody.Kind = MethodBodyKind.ThreeAddressCode;
 
                     Assembler assembler = new Assembler(mainMethod.Body);
-                    var bytecodeBody = assembler.Execute();
+                    MethodBody bytecodeBody = assembler.Execute();
                     mainMethod.Body = bytecodeBody;
                     mainMethod.Body.Kind = MethodBodyKind.Bytecode;
                 }
@@ -84,17 +92,17 @@ namespace Tests
 
             // hack: we are assuming it is always a .dll
             output = output + ".dll";
-            var DLL = System.Reflection.Assembly.LoadFile(Path.Combine(outputDir, Path.GetFileName(output)));
+            System.Reflection.Assembly DLL = System.Reflection.Assembly.LoadFile(Path.Combine(outputDir, Path.GetFileName(output)));
 
             Type type = DLL.GetType(typeName);
-            var methodInfoStatic = type.GetMethod(method);
+            System.Reflection.MethodInfo methodInfoStatic = type.GetMethod(method);
             if (methodInfoStatic == null)
             {
                 throw new Exception("No such static method exists.");
             }
 
             // Invoke static method
-            Object result = methodInfoStatic.Invoke(null, parameters);
+            object result = methodInfoStatic.Invoke(null, parameters);
 
             return result;
         }

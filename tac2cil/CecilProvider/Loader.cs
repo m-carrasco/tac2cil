@@ -1,31 +1,23 @@
 ﻿// Copyright (c) Edgardo Zoppi.  All Rights Reserved.  Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using Model;
-using Model.Types;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Cecil = Mono.Cecil;
 namespace CecilProvider
 {
     public class Loader : ILoader
     {
-        private Host ourHost;
+        private readonly Host ourHost;
 
         public Loader(Host host)
         {
-            this.ourHost = host;
+            ourHost = host;
         }
 
-        public void Dispose() {}
+        public void Dispose() { }
 
-        public Host Host
-        {
-            get { return ourHost; }
-        }
+        public Host Host => ourHost;
 
         public Assembly LoadCoreAssembly()
         {
@@ -35,10 +27,10 @@ namespace CecilProvider
 
         public Assembly LoadAssembly(string fileName)
         {
-            var module = Cecil.ModuleDefinition.ReadModule(fileName);
-            var assemblyResolver = module.AssemblyResolver as Cecil.DefaultAssemblyResolver;
+            Cecil.ModuleDefinition module = Cecil.ModuleDefinition.ReadModule(fileName);
+            Cecil.DefaultAssemblyResolver assemblyResolver = module.AssemblyResolver as Cecil.DefaultAssemblyResolver;
             assemblyResolver.AddSearchDirectory(Path.GetDirectoryName(Path.GetFullPath(fileName)));
-            var assembly = this.ExtractAssembly(module);
+            Assembly assembly = ExtractAssembly(module);
             ourHost.Assemblies.Add(assembly);
             return assembly;
         }

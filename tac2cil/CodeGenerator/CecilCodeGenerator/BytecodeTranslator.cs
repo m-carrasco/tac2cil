@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using Cecil = Mono.Cecil;
-using AnalysisNet = Model;
-using AnalysisNetTac = Model.ThreeAddressCode;
-
 using System.Diagnostics.Contracts;
 using System.Linq;
+using AnalysisNet = Model;
+using AnalysisNetTac = Model.ThreeAddressCode;
+using Cecil = Mono.Cecil;
 
 namespace CodeGenerator.CecilCodeGenerator
 {
@@ -19,30 +17,31 @@ namespace CodeGenerator.CecilCodeGenerator
 
         public Model.Bytecode.Instruction GetTarget(string target)
         {
-            var offset = ParseTarget(target);
+            uint offset = ParseTarget(target);
             return translated.Where(kv => kv.Offset == offset).Single();
         }
 
         private uint ParseTarget(string target)
         {
-            uint targetOffset;
-            bool success = uint.TryParse(target.Replace("L_", ""), System.Globalization.NumberStyles.HexNumber, null, out targetOffset);
+            bool success = uint.TryParse(target.Replace("L_", ""), System.Globalization.NumberStyles.HexNumber, null, out uint targetOffset);
             if (!success)
+            {
                 throw new Exception();
+            }
 
             return targetOffset;
         }
 
-        private ICollection<Model.Bytecode.Instruction> translated;
+        private readonly ICollection<Model.Bytecode.Instruction> translated;
     }
 
     internal class BytecodeTranslator : Model.Bytecode.Visitor.InstructionVisitor
     {
-        private AnalysisNet.Types.MethodDefinition methodDefinition;
-        private Cecil.Cil.ILProcessor processor = null;
-        private IDictionary<AnalysisNetTac.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions;
-        private IDictionary<AnalysisNetTac.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions;
-        private ReferenceGenerator referenceGenerator;
+        private readonly AnalysisNet.Types.MethodDefinition methodDefinition;
+        private readonly Cecil.Cil.ILProcessor processor = null;
+        private readonly IDictionary<AnalysisNetTac.Values.IVariable, Cecil.Cil.VariableDefinition> variableDefinitions;
+        private readonly IDictionary<AnalysisNetTac.Values.IVariable, Cecil.ParameterDefinition> parameterDefinitions;
+        private readonly ReferenceGenerator referenceGenerator;
         public IList<Cecil.Cil.Instruction> Result;
 
         public BytecodeTranslator(AnalysisNet.Types.MethodDefinition methodDefinition,
@@ -67,13 +66,13 @@ namespace CodeGenerator.CecilCodeGenerator
             foreach (Model.Bytecode.Instruction ins in methodDefinition.Body.Instructions)
             {
                 ins.Accept(this);
-                Contract.Assert(this.Result != null);
-                translated[ins] = this.Result;
+                Contract.Assert(Result != null);
+                translated[ins] = Result;
             }
 
             IEnumerable<AnalysisNet.Bytecode.Instruction> branches = methodDefinition.Body.Instructions.OfType<AnalysisNet.Bytecode.BranchInstruction>();
             IEnumerable<AnalysisNet.Bytecode.Instruction> switches = methodDefinition.Body.Instructions.OfType<AnalysisNet.Bytecode.SwitchInstruction>();
-            var union = branches.Union(switches);
+            IEnumerable<AnalysisNet.Bytecode.Instruction> union = branches.Union(switches);
             TranslatePendingBranches(translated, union.ToList());
 
             return translated;//return translated.Values.SelectMany(l => l);
@@ -84,39 +83,41 @@ namespace CodeGenerator.CecilCodeGenerator
 
             while (pending.Count > 0)
             {
-                var ins = pending.First();
+                AnalysisNet.Bytecode.Instruction ins = pending.First();
                 pending.Remove(ins);
 
                 if (ins is AnalysisNet.Bytecode.BranchInstruction br)
                 {
-                    var result = translated[targetFinder.GetTarget(br.Target)].First();
+                    Cecil.Cil.Instruction result = translated[targetFinder.GetTarget(br.Target)].First();
                     translated[br].First().Operand = result;
                 }
                 else if (ins is AnalysisNet.Bytecode.SwitchInstruction switchIns)
                 {
                     for (int idx = 0; idx < switchIns.Targets.Count; idx++)
                     {
-                        var target = switchIns.Targets[idx];
-                        var result = translated[targetFinder.GetTarget(target)].First();
-                        var cecilTargets = translated[switchIns].First().Operand as Cecil.Cil.Instruction[];
+                        string target = switchIns.Targets[idx];
+                        Cecil.Cil.Instruction result = translated[targetFinder.GetTarget(target)].First();
+                        Cecil.Cil.Instruction[] cecilTargets = translated[switchIns].First().Operand as Cecil.Cil.Instruction[];
                         cecilTargets[idx] = result;
                     }
                 }
                 else
+                {
                     throw new NotImplementedException();
+                }
             }
         }
 
         public override void Visit(Model.Bytecode.ConstrainedInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction ins = processor.Create(Mono.Cecil.Cil.OpCodes.Constrained, referenceGenerator.TypeReference(instruction.ThisType));
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { ins };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { ins };
         }
         public override void Visit(Model.Bytecode.InitObjInstruction instruction)
         {
-            var op = Cecil.Cil.OpCodes.Initobj;
-            var type = referenceGenerator.TypeReference(instruction.Type);
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op, type) };
+            Cecil.Cil.OpCode op = Cecil.Cil.OpCodes.Initobj;
+            Cecil.TypeReference type = referenceGenerator.TypeReference(instruction.Type);
+            Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op, type) };
         }
         public override void Visit(Model.Bytecode.BasicInstruction instruction)
         {
@@ -155,7 +156,10 @@ namespace CodeGenerator.CecilCodeGenerator
                         op = Mono.Cecil.Cil.OpCodes.Sub;
                     }
                     else
+                    {
                         throw new NotImplementedException();
+                    }
+
                     break;
                 case Model.Bytecode.BasicOperation.Nop:
                     op = Mono.Cecil.Cil.OpCodes.Nop;
@@ -192,26 +196,43 @@ namespace CodeGenerator.CecilCodeGenerator
                     break;
                 case Model.Bytecode.BasicOperation.Mul:
                     if (instruction.OverflowCheck && instruction.UnsignedOperands)
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Mul_Ovf_Un;
+                    }
                     else if (instruction.OverflowCheck)
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Mul_Ovf;
+                    }
                     else
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Mul;
+                    }
+
                     break;
                 case Model.Bytecode.BasicOperation.Eq:
                     op = Mono.Cecil.Cil.OpCodes.Ceq;
                     break;
                 case Model.Bytecode.BasicOperation.Gt:
                     if (!instruction.UnsignedOperands)
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Cgt;
+                    }
                     else
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Cgt_Un;
+                    }
+
                     break;
                 case Model.Bytecode.BasicOperation.Lt:
                     if (!instruction.UnsignedOperands)
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Clt;
+                    }
                     else
+                    {
                         op = Mono.Cecil.Cil.OpCodes.Clt_Un;
+                    }
+
                     break;
                 case Model.Bytecode.BasicOperation.Or:
                     op = Mono.Cecil.Cil.OpCodes.Or;
@@ -232,7 +253,7 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
             }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op.Value) };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(op.Value) };
         }
 
         public override void Visit(Model.Bytecode.LoadIndirectInstruction instruction)
@@ -287,12 +308,18 @@ namespace CodeGenerator.CecilCodeGenerator
                 opcode = Mono.Cecil.Cil.OpCodes.Ldobj;
             }
             else
+            {
                 throw new NotImplementedException();
+            }
 
             if (opcode != Mono.Cecil.Cil.OpCodes.Ldobj)
-                this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
+            {
+                Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
+            }
             else
-                this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, referenceGenerator.TypeReference(instruction.Type)) };
+            {
+                Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, referenceGenerator.TypeReference(instruction.Type)) };
+            }
         }
 
         public override void Visit(Model.Bytecode.StoreIndirectInstruction instruction)
@@ -342,12 +369,18 @@ namespace CodeGenerator.CecilCodeGenerator
                 opcode = Mono.Cecil.Cil.OpCodes.Stobj;
             }
             else
+            {
                 throw new NotImplementedException();
+            }
 
             if (opcode != Mono.Cecil.Cil.OpCodes.Stobj)
-                this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
+            {
+                Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode) };
+            }
             else
-                this.Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, referenceGenerator.TypeReference(instruction.Type)) };
+            {
+                Result = new List<Mono.Cecil.Cil.Instruction>() { processor.Create(opcode, referenceGenerator.TypeReference(instruction.Type)) };
+            }
         }
 
         public override void Visit(Model.Bytecode.LoadInstruction instruction)
@@ -361,13 +394,18 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (variable.IsParameter)
                 {
                     if (variable.Name != "this")
+                    {
                         cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarg, parameterDefinitions[variable]);
+                    }
                     else
+                    {
                         cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarg, 0);
+                    }
                 }
                 else
+                {
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloc, variableDefinitions[variable]);
-
+                }
             }
             else if (instruction.Operation == Model.Bytecode.LoadOperation.Value)
             {
@@ -406,7 +444,9 @@ namespace CodeGenerator.CecilCodeGenerator
                         cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldnull);
                     }
                     else
+                    {
                         throw new NotImplementedException();
+                    }
                 }
                 else if (instruction.Operand is AnalysisNetTac.Values.IVariable variable)
                 {
@@ -417,8 +457,9 @@ namespace CodeGenerator.CecilCodeGenerator
                     throw new NotImplementedException();
                 }
                 else
+                {
                     throw new NotImplementedException();
-
+                }
             }
             else if (instruction.Operation == Model.Bytecode.LoadOperation.Address)
             {
@@ -427,20 +468,30 @@ namespace CodeGenerator.CecilCodeGenerator
                     if (variable.IsParameter)
                     {
                         if (variable.Name != "this")
+                        {
                             cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, parameterDefinitions[variable]);
+                        }
                         else
+                        {
                             cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldarga, 0);
+                        }
                     }
                     else
+                    {
                         cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldloca, variableDefinitions[variable]);
+                    }
                 }
                 else
+                {
                     throw new NotImplementedException();
+                }
             }
             else
+            {
                 throw new NotImplementedException();
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         public override void Visit(Model.Bytecode.LoadFieldInstruction instruction)
@@ -450,40 +501,55 @@ namespace CodeGenerator.CecilCodeGenerator
             if (instruction.Operation == Model.Bytecode.LoadFieldOperation.Content)
             {
                 if (!instruction.Field.IsStatic)
+                {
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldfld, fieldReference);
+                }
                 else
+                {
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldsfld, fieldReference);
+                }
             }
             else
             {
                 if (!instruction.Field.IsStatic)
+                {
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldflda, fieldReference);
+                }
                 else
+                {
                     cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Ldsflda, fieldReference);
+                }
             }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
-        public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction) {
+        public override void Visit(Model.Bytecode.LoadMethodAddressInstruction instruction)
+        {
 
-            var op = Cecil.Cil.OpCodes.Ldftn;
+            Cecil.Cil.OpCode op = Cecil.Cil.OpCodes.Ldftn;
 
             if (instruction.Operation == AnalysisNet.Bytecode.LoadMethodAddressOperation.Virtual)
+            {
                 op = Cecil.Cil.OpCodes.Ldvirtftn;
+            }
 
-            var cilIns = processor.Create(op, referenceGenerator.MethodReference(instruction.Method));
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Cecil.Cil.Instruction cilIns = processor.Create(op, referenceGenerator.MethodReference(instruction.Method));
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
         public override void Visit(Model.Bytecode.StoreInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction cilIns;
             if (instruction.Target.IsParameter)
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Starg, parameterDefinitions[instruction.Target]);
+            }
             else
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stloc, variableDefinitions[instruction.Target]);
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         public override void Visit(Model.Bytecode.StoreFieldInstruction instruction)
@@ -492,13 +558,17 @@ namespace CodeGenerator.CecilCodeGenerator
             Cecil.FieldReference fieldReference = referenceGenerator.FieldReference(instruction.Field);
 
             if (!instruction.Field.IsStatic)
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stfld, fieldReference);
+            }
             else
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Stsfld, fieldReference);
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
-        
+
         private Cecil.Cil.OpCode GetConvOpcode(Model.Bytecode.ConvertInstruction instruction)
         {
             if (instruction.OverflowCheck)
@@ -506,48 +576,106 @@ namespace CodeGenerator.CecilCodeGenerator
                 if (instruction.UnsignedOperands)
                 {
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I1_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I2_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I4_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I8_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U1_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U2_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U4_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U8_Un;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U_Un;
+                    }
                 }
                 else
                 {
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I1;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I2;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I4;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I8;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_I;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U1;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U2;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U4;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U8;
+                    }
+
                     if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                    {
                         return Mono.Cecil.Cil.OpCodes.Conv_Ovf_U;
+                    }
                 }
 
             }
@@ -555,33 +683,69 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 if (instruction.UnsignedOperands &&
                     instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float32))
+                {
                     return Mono.Cecil.Cil.OpCodes.Conv_R_Un;
+                }
 
                 if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float32))
+                {
                     return Mono.Cecil.Cil.OpCodes.Conv_R4;
+                }
+
                 if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Float64))
+                {
                     return Mono.Cecil.Cil.OpCodes.Conv_R8;
+                }
 
                 if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int8))
-                        return Mono.Cecil.Cil.OpCodes.Conv_I1;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
-                        return Mono.Cecil.Cil.OpCodes.Conv_I2;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
-                        return Mono.Cecil.Cil.OpCodes.Conv_I4;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
-                        return Mono.Cecil.Cil.OpCodes.Conv_I8;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
-                        return Mono.Cecil.Cil.OpCodes.Conv_I;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
-                        return Mono.Cecil.Cil.OpCodes.Conv_U1;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
-                        return Mono.Cecil.Cil.OpCodes.Conv_U2;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
-                        return Mono.Cecil.Cil.OpCodes.Conv_U4;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
-                        return Mono.Cecil.Cil.OpCodes.Conv_U8;
-                    if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
-                        return Mono.Cecil.Cil.OpCodes.Conv_U;
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_I1;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int16))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_I2;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int32))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_I4;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.Int64))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_I8;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.IntPtr))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_I;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt8))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_U1;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt16))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_U2;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt32))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_U4;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UInt64))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_U8;
+                }
+
+                if (instruction.ConversionType.Equals(Model.Types.PlatformTypes.UIntPtr))
+                {
+                    return Mono.Cecil.Cil.OpCodes.Conv_U;
+                }
             }
 
             throw new NotImplementedException();
@@ -593,23 +757,29 @@ namespace CodeGenerator.CecilCodeGenerator
             if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Box)
             {
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Box, referenceGenerator.TypeReference(instruction.ConversionType));
-            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Conv)
+            }
+            else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Conv)
             {
                 cilIns = processor.Create(GetConvOpcode(instruction));
-            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Cast)
+            }
+            else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Cast)
             {
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Castclass, referenceGenerator.TypeReference(instruction.ConversionType));
             }
             else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.Unbox)
             {
                 throw new NotImplementedException();
-            } else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.UnboxPtr)
+            }
+            else if (instruction.Operation == AnalysisNet.Bytecode.ConvertOperation.UnboxPtr)
             {
                 throw new NotImplementedException();
-            } else
+            }
+            else
+            {
                 throw new NotImplementedException();
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         private Mono.Cecil.Cil.OpCode GetCilBranchOpcode(Model.Bytecode.BranchInstruction instruction)
@@ -624,26 +794,46 @@ namespace CodeGenerator.CecilCodeGenerator
                     return Mono.Cecil.Cil.OpCodes.Brfalse;
                 case AnalysisNet.Bytecode.BranchOperation.Ge:
                     if (instruction.UnsignedOperands)
+                    {
                         return Mono.Cecil.Cil.OpCodes.Bge_Un;
+                    }
                     else
+                    {
                         return Mono.Cecil.Cil.OpCodes.Bge;
+                    }
+
                 case AnalysisNet.Bytecode.BranchOperation.Gt:
                     if (instruction.UnsignedOperands)
+                    {
                         return Mono.Cecil.Cil.OpCodes.Bgt_Un;
+                    }
                     else
+                    {
                         return Mono.Cecil.Cil.OpCodes.Bgt;
+                    }
+
                 case AnalysisNet.Bytecode.BranchOperation.Le:
                     if (instruction.UnsignedOperands)
+                    {
                         return Mono.Cecil.Cil.OpCodes.Ble_Un;
+                    }
                     else
+                    {
                         return Mono.Cecil.Cil.OpCodes.Ble;
+                    }
+
                 case AnalysisNet.Bytecode.BranchOperation.Leave:
                     return Mono.Cecil.Cil.OpCodes.Leave;
                 case AnalysisNet.Bytecode.BranchOperation.Lt:
                     if (instruction.UnsignedOperands)
+                    {
                         return Mono.Cecil.Cil.OpCodes.Blt_Un;
+                    }
                     else
+                    {
                         return Mono.Cecil.Cil.OpCodes.Blt;
+                    }
+
                 case AnalysisNet.Bytecode.BranchOperation.Neq:
                     return Mono.Cecil.Cil.OpCodes.Bne_Un;
                 case AnalysisNet.Bytecode.BranchOperation.True:
@@ -656,71 +846,81 @@ namespace CodeGenerator.CecilCodeGenerator
         public override void Visit(Model.Bytecode.BranchInstruction instruction)
         {
             // placeholder for target as a nop
-            var cilIns = processor.Create(GetCilBranchOpcode(instruction), processor.Create(Cecil.Cil.OpCodes.Nop));
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Cecil.Cil.Instruction cilIns = processor.Create(GetCilBranchOpcode(instruction), processor.Create(Cecil.Cil.OpCodes.Nop));
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         public override void Visit(Model.Bytecode.SwitchInstruction instruction)
         {
-            var targets = instruction.Targets.Select(t => processor.Create(Cecil.Cil.OpCodes.Nop));
-            var cilIns = processor.Create(Cecil.Cil.OpCodes.Switch, targets.ToArray());
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            IEnumerable<Cecil.Cil.Instruction> targets = instruction.Targets.Select(t => processor.Create(Cecil.Cil.OpCodes.Nop));
+            Cecil.Cil.Instruction cilIns = processor.Create(Cecil.Cil.OpCodes.Switch, targets.ToArray());
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
         public override void Visit(Model.Bytecode.SizeofInstruction instruction) { throw new NotImplementedException(); }
-        public override void Visit(Model.Bytecode.LoadTokenInstruction instruction) 
+        public override void Visit(Model.Bytecode.LoadTokenInstruction instruction)
         {
             Cecil.Cil.Instruction cilIns;
             if (instruction.Token is AnalysisNet.Types.IType type)
             {
-                var token = referenceGenerator.TypeReference(type);
+                Cecil.TypeReference token = referenceGenerator.TypeReference(type);
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Ldtoken, token);
             }
             else if (instruction.Token is AnalysisNet.Types.IFieldReference field)
             {
-                var token = referenceGenerator.FieldReference(field);
+                Cecil.FieldReference token = referenceGenerator.FieldReference(field);
                 cilIns = processor.Create(Cecil.Cil.OpCodes.Ldtoken, token);
             }
             else
+            {
                 throw new NotImplementedException();
-            
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            }
+
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
         public override void Visit(Model.Bytecode.MethodCallInstruction instruction)
         {
             Mono.Cecil.Cil.Instruction cilIns;
-            var methodReference = referenceGenerator.MethodReference(instruction.Method);
+            Cecil.MethodReference methodReference = referenceGenerator.MethodReference(instruction.Method);
 
             if (instruction.Operation == Model.Bytecode.MethodCallOperation.Static)
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Call, methodReference);
+            }
             else if (instruction.Operation == Model.Bytecode.MethodCallOperation.Virtual)
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Callvirt, methodReference);
+            }
             else
+            {
                 throw new NotImplementedException();
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
         public override void Visit(Model.Bytecode.IndirectMethodCallInstruction instruction) { throw new NotImplementedException(); }
         public override void Visit(Model.Bytecode.CreateObjectInstruction instruction)
         {
-            var methodReference = referenceGenerator.MethodReference(instruction.Constructor);
-            var cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, methodReference);
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Cecil.MethodReference methodReference = referenceGenerator.MethodReference(instruction.Constructor);
+            Cecil.Cil.Instruction cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, methodReference);
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         public override void Visit(Model.Bytecode.CreateArrayInstruction instruction)
         {
-            var cilArrayType = referenceGenerator.TypeReference(instruction.Type) as Cecil.ArrayType;
+            Cecil.ArrayType cilArrayType = referenceGenerator.TypeReference(instruction.Type) as Cecil.ArrayType;
 
             Mono.Cecil.Cil.Instruction cilIns = null;
             if (!instruction.Type.IsVector)
             {
-                var arrayCtor = ArrayHelper.ArrayCtor(cilArrayType as Cecil.ArrayType);
+                Cecil.MethodReference arrayCtor = ArrayHelper.ArrayCtor(cilArrayType as Cecil.ArrayType);
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newobj, arrayCtor);
             }
             else
+            {
                 cilIns = processor.Create(Mono.Cecil.Cil.OpCodes.Newarr, cilArrayType.ElementType);
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { cilIns };
         }
 
         public override void Visit(Model.Bytecode.LoadArrayElementInstruction instruction)
@@ -731,17 +931,19 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 if (!instruction.Array.IsVector)
                 {
-                    var arrayAddress = ArrayHelper.ArrayAddress(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
+                    Cecil.MethodReference arrayAddress = ArrayHelper.ArrayAddress(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayAddress);
                 }
                 else
+                {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelema, referenceGenerator.TypeReference(instruction.Array.ElementsType));
+                }
             }
             else if (instruction.Operation == AnalysisNet.Bytecode.LoadArrayElementOperation.Content)
             {
                 if (!instruction.Array.IsVector)
                 {
-                    var arrayGet = ArrayHelper.ArrayGet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
+                    Cecil.MethodReference arrayGet = ArrayHelper.ArrayGet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
 
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayGet);
 
@@ -788,9 +990,11 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
             }
             else
+            {
                 throw new NotImplementedException();
+            }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { res };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { res };
         }
 
         public override void Visit(Model.Bytecode.StoreArrayElementInstruction instruction)
@@ -799,7 +1003,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (!instruction.Array.IsVector)
             {
-                var arraySet = ArrayHelper.ArraySet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
+                Cecil.MethodReference arraySet = ArrayHelper.ArraySet(referenceGenerator.TypeReference(instruction.Array) as Cecil.ArrayType);
                 res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arraySet);
             }
             else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.IntPtr)
@@ -843,7 +1047,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 res = processor.Create(Mono.Cecil.Cil.OpCodes.Stelem_Any, referenceGenerator.TypeReference(instruction.Array.ElementsType));
             }
 
-            this.Result = new List<Mono.Cecil.Cil.Instruction>() { res };
+            Result = new List<Mono.Cecil.Cil.Instruction>() { res };
         }
 
     }

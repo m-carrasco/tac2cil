@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace CodeGenerator
 {
@@ -12,27 +11,37 @@ namespace CodeGenerator
 
             // nested types
             if (basicType.ContainingType != null)
+            {
                 genericParameters -= basicType.ContainingType.GenericParameterCount;
+            }
 
             if (genericParameters < 0)
+            {
                 throw new Exception("calculated generic parameter count cannot be negative.");
+            }
 
             if (genericParameters == 0)
+            {
                 return basicType.Name;
+            }
 
             return string.Format("{0}`{1}", basicType.Name, genericParameters);
         }
 
         public static void AddRange<T>(this ICollection<T> t, IEnumerable<T> x)
         {
-            foreach (var elem in x)
+            foreach (T elem in x)
+            {
                 t.Add(elem);
+            }
         }
 
         public static void CreateGenericParameters(this Mono.Cecil.IGenericParameterProvider container, int count)
         {
             for (int i = 0; i < count; i++)
+            {
                 container.GenericParameters.Add(new Mono.Cecil.GenericParameter(container));
+            }
         }
 
         // before yielding type def A it yields every nested type in A
@@ -40,14 +49,18 @@ namespace CodeGenerator
         public static IEnumerable<Model.Types.TypeDefinition> TraverseTypes(this Model.Assembly assembly)
         {
             ISet<Model.Types.TypeDefinition> visited = new HashSet<Model.Types.TypeDefinition>();
-            
-            foreach (var typeDefinition in Model.Types.TypeHelper.GetAllTypes(assembly.RootNamespace))
+
+            foreach (Model.Types.TypeDefinition typeDefinition in Model.Types.TypeHelper.GetAllTypes(assembly.RootNamespace))
             {
                 if (visited.Contains(typeDefinition))
+                {
                     continue;
+                }
 
-                foreach (var t in DFS(typeDefinition, visited))
+                foreach (Model.Types.TypeDefinition t in DFS(typeDefinition, visited))
+                {
                     yield return t;
+                }
             }
         }
 
@@ -58,12 +71,12 @@ namespace CodeGenerator
             if (typeDefinition.ContainingType == null ||
                 visited.Contains(typeDefinition.ContainingType))
             {
-                var l = new LinkedList<Model.Types.TypeDefinition>();
+                LinkedList<Model.Types.TypeDefinition> l = new LinkedList<Model.Types.TypeDefinition>();
                 l.AddLast(typeDefinition);
                 return l;
             }
 
-            var rec = DFS(typeDefinition.ContainingType, visited);
+            LinkedList<Model.Types.TypeDefinition> rec = DFS(typeDefinition.ContainingType, visited);
             rec.AddLast(typeDefinition);
 
             return rec;

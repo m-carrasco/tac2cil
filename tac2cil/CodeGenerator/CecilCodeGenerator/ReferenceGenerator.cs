@@ -7,7 +7,7 @@ using Cecil = Mono.Cecil;
 
 namespace CodeGenerator.CecilCodeGenerator
 {
-    class ReferenceGenerator
+    internal class ReferenceGenerator
     {
 
         // Maps a position in a generic argument list to a generic parameter
@@ -18,12 +18,12 @@ namespace CodeGenerator.CecilCodeGenerator
 
         public ReferenceGenerator(Context context)
         {
-            this.Context = context;
-            this.fieldsCache = context.ModelMapping.FieldsMap;
-            this.typesCache = context.ModelMapping.TypesMap;
-            this.methodsCache = context.ModelMapping.MethodsMap;
+            Context = context;
+            fieldsCache = context.ModelMapping.FieldsMap;
+            typesCache = context.ModelMapping.TypesMap;
+            methodsCache = context.ModelMapping.MethodsMap;
 
-            this.genericParamsMap = new Dictionary<AnalysisNet.Types.IGenericReference, GenericParameterMap>();
+            genericParamsMap = new Dictionary<AnalysisNet.Types.IGenericReference, GenericParameterMap>();
         }
 
         public Context Context { get; }
@@ -38,9 +38,9 @@ namespace CodeGenerator.CecilCodeGenerator
 
         private void MapGenericParameters(Cecil.IGenericParameterProvider cecilContainer, AnalysisNet.Types.IGenericReference analysisNetContainer)
         {
-            var map = new GenericParameterMap();
+            GenericParameterMap map = new GenericParameterMap();
 
-            for (int i=0; i < cecilContainer.GenericParameters.Count; i++)
+            for (int i = 0; i < cecilContainer.GenericParameters.Count; i++)
             {
                 map[i] = cecilContainer.GenericParameters.ElementAt(i);
             }
@@ -51,13 +51,19 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.GenericParameter GetGenericParameter(AnalysisNet.Types.IGenericParameterReference analysisNetGP)
         {
             if (genericParamsMap.TryGetValue(analysisNetGP.GenericContainer, out GenericParameterMap map))
+            {
                 return map[analysisNetGP.Index];
+            }
 
             // populates map
             if (analysisNetGP.Kind == AnalysisNet.Types.GenericParameterKind.Method)
+            {
                 MethodReference(analysisNetGP.GenericContainer as AnalysisNet.Types.IMethodReference);
+            }
             else
+            {
                 TypeReference(analysisNetGP.GenericContainer as AnalysisNet.Types.IBasicType);
+            }
 
             map = genericParamsMap[analysisNetGP.GenericContainer];
             return map[analysisNetGP.Index];
@@ -66,7 +72,9 @@ namespace CodeGenerator.CecilCodeGenerator
         public Cecil.FieldReference FieldReference(AnalysisNet.Types.IFieldReference fieldReference)
         {
             if (fieldsCache.TryGetValue(fieldReference, out Cecil.FieldReference cecilField))
+            {
                 return cecilField;
+            }
 
             Cecil.TypeReference cecilType = TypeReference(fieldReference.Type);
             Cecil.TypeReference declaringType = TypeReference(fieldReference.ContainingType);
@@ -85,14 +93,18 @@ namespace CodeGenerator.CecilCodeGenerator
         public Cecil.MethodReference MethodReference(AnalysisNet.Types.IMethodReference methodReference)
         {
             if (methodsCache.TryGetValue(methodReference, out Cecil.MethodReference cecilMethodReference))
+            {
                 return cecilMethodReference;
+            }
 
             Cecil.TypeReference dummyReturnType = Context.CurrentModule.TypeSystem.Void;
             Cecil.TypeReference declaringType = TypeReference(methodReference.ContainingType);
 
             string name = methodReference.Name;
-            cecilMethodReference = new Cecil.MethodReference(name, dummyReturnType, declaringType);
-            cecilMethodReference.HasThis = !methodReference.IsStatic;
+            cecilMethodReference = new Cecil.MethodReference(name, dummyReturnType, declaringType)
+            {
+                HasThis = !methodReference.IsStatic
+            };
 
             if (methodReference.GenericParameterCount > 0)
             {
@@ -101,14 +113,14 @@ namespace CodeGenerator.CecilCodeGenerator
                 // should we add constraints?
                 if (methodReference.GenericArguments.Count == 0)
                 {
-                    var instantiated = new Cecil.GenericInstanceMethod(cecilMethodReference);
+                    Cecil.GenericInstanceMethod instantiated = new Cecil.GenericInstanceMethod(cecilMethodReference);
                     instantiated.GenericArguments.AddRange(cecilMethodReference.GenericParameters);
                     cecilMethodReference = instantiated;
                 }
                 else
                 {
-                    var arguments = methodReference.GenericArguments.Select(ga => TypeReference(ga));
-                    var instantiated = new Cecil.GenericInstanceMethod(cecilMethodReference);
+                    IEnumerable<Cecil.TypeReference> arguments = methodReference.GenericArguments.Select(ga => TypeReference(ga));
+                    Cecil.GenericInstanceMethod instantiated = new Cecil.GenericInstanceMethod(cecilMethodReference);
                     instantiated.GenericArguments.AddRange(arguments);
                     cecilMethodReference = instantiated;
                 }
@@ -116,13 +128,18 @@ namespace CodeGenerator.CecilCodeGenerator
 
             cecilMethodReference.ReturnType = TypeReference(methodReference.ReturnType);
 
-            foreach (var parameter in methodReference.Parameters)
+            foreach (AnalysisNet.Types.IMethodParameterReference parameter in methodReference.Parameters)
             {
-                var cecilParam = new Cecil.ParameterDefinition(TypeReference(parameter.Type));
+                Cecil.ParameterDefinition cecilParam = new Cecil.ParameterDefinition(TypeReference(parameter.Type));
                 if (parameter.Kind == AnalysisNet.Types.MethodParameterKind.In)
+                {
                     cecilParam.IsIn = true;
+                }
                 else if (parameter.Kind == AnalysisNet.Types.MethodParameterKind.Out)
+                {
                     cecilParam.IsOut = true;
+                }
+
                 cecilMethodReference.Parameters.Add(cecilParam);
             }
 
@@ -134,10 +151,14 @@ namespace CodeGenerator.CecilCodeGenerator
         public Cecil.TypeReference TypeReference(AnalysisNet.Types.IType type)
         {
             if (type is AnalysisNet.Types.IBasicType basicType)
+            {
                 return TypeReference(basicType);
+            }
 
             if (type is AnalysisNet.Types.IGenericParameterReference iGenericParam)
+            {
                 return TypeReference(iGenericParam);
+            }
 
             if (type is AnalysisNet.Types.FunctionPointerType functionPointerType)
             {
@@ -162,7 +183,7 @@ namespace CodeGenerator.CecilCodeGenerator
 
             throw new NotImplementedException();
         }
-        
+
         private Cecil.ModuleDefinition ResolveModule(AnalysisNet.Types.TypeDefinition typeDefinition)
         {
             return Context.ModelMapping.AssembliesMap[typeDefinition.ContainingAssembly].MainModule;
@@ -171,7 +192,9 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.TypeReference TypeReference(AnalysisNet.Types.IBasicType basicType)
         {
             if (typesCache.TryGetValue(basicType, out Cecil.TypeReference cecilTypeReference))
+            {
                 return cecilTypeReference;
+            }
 
             Cecil.TypeReference platformType = TypeReferenceToPlatformType(basicType);
             if (platformType != null)
@@ -185,16 +208,20 @@ namespace CodeGenerator.CecilCodeGenerator
             Cecil.ModuleDefinition module = ResolveModule(basicType);
             Cecil.IMetadataScope scope = module ?? ResolveScope(basicType);
             if (module == null && scope == null)
+            {
                 throw new NotImplementedException();
+            }
 
             cecilTypeReference = new Cecil.TypeReference(nmspace, name, module, scope);
             if (basicType.TypeKind == AnalysisNet.Types.TypeKind.ValueType)
+            {
                 cecilTypeReference.IsValueType = true;
+            }
 
             if (basicType.ContainingType != null)
             {
                 cecilTypeReference.DeclaringType = TypeReference(basicType.ContainingType);
-                cecilTypeReference.Namespace = String.Empty;
+                cecilTypeReference.Namespace = string.Empty;
             }
 
             if (basicType.GenericParameterCount > 0)
@@ -212,7 +239,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 }
                 else
                 {
-                    var arguments = basicType.GenericArguments.Select(ga => TypeReference(ga)).ToArray();
+                    Cecil.TypeReference[] arguments = basicType.GenericArguments.Select(ga => TypeReference(ga)).ToArray();
                     instantiated = cecilTypeReference.MakeGenericInstanceType(arguments);
                 }
 
@@ -230,7 +257,9 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.ModuleDefinition ResolveModule(AnalysisNet.Types.IBasicType basicType)
         {
             if (basicType.ResolvedType != null)
+            {
                 return ResolveModule(basicType.ResolvedType);
+            }
 
             return null;
         }
@@ -238,22 +267,28 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.IMetadataScope ResolveScope(AnalysisNet.Types.IBasicType basicType)
         {
             if (basicType.ContainingAssembly.Name.Equals("mscorlib"))
+            {
                 return Context.CurrentModule.TypeSystem.CoreLibrary;
+            }
 
             if (basicType.ContainingAssembly.Name.Equals("System.Core"))
             {
                 //var enumerable = Context.CurrentModule.ImportReference(typeof(Enumerable));
                 //var r = enumerable.Module.AssemblyReferences.Where(assembly => assembly.Name.Equals("System.Core")).First();
                 //return r;
-                var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
-                a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
+                Cecil.AssemblyNameReference a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0))
+                {
+                    PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 }
+                };
                 return a;
             }
 
             if (basicType.ContainingAssembly.Name.Equals("System"))
             {
-                var a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0));
-                a.PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 };
+                Cecil.AssemblyNameReference a = new Cecil.AssemblyNameReference(basicType.ContainingAssembly.Name, new Version(4, 0, 0, 0))
+                {
+                    PublicKeyToken = new byte[8] { 183, 122, 92, 86, 25, 52, 224, 137 }
+                };
                 return a;
             }
 
@@ -263,7 +298,9 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.TypeReference ImportTypeReference(Cecil.TypeReference typeReference)
         {
             if (typeReference.Module == null || typeReference.Module != Context.CurrentModule)
+            {
                 typeReference = Context.CurrentModule.ImportReference(typeReference);
+            }
 
             return typeReference;
         }
@@ -272,22 +309,34 @@ namespace CodeGenerator.CecilCodeGenerator
         private Cecil.TypeReference TypeReferenceToPlatformType(AnalysisNet.Types.IBasicType basicType)
         {
             if (basicType.Equals(Model.Types.PlatformTypes.Object))
+            {
                 return Context.CurrentModule.TypeSystem.Object;
+            }
 
             if (basicType.Equals(Model.Types.PlatformTypes.Void))
+            {
                 return Context.CurrentModule.TypeSystem.Void;
+            }
 
             if (basicType.Equals(Model.Types.PlatformTypes.Int32))
+            {
                 return Context.CurrentModule.TypeSystem.Int32;
+            }
 
             if (basicType.Equals(Model.Types.PlatformTypes.String))
+            {
                 return Context.CurrentModule.TypeSystem.String;
+            }
 
             if (basicType.Equals(Model.Types.PlatformTypes.Boolean))
+            {
                 return Context.CurrentModule.TypeSystem.Boolean;
+            }
 
             if (basicType.Equals(Model.Types.PlatformTypes.Single))
+            {
                 return Context.CurrentModule.TypeSystem.Single;
+            }
 
             return null;
         }
@@ -297,7 +346,9 @@ namespace CodeGenerator.CecilCodeGenerator
             if (genericParameter.Kind == AnalysisNet.Types.GenericParameterKind.Type)
             {
                 if (typesCache.TryGetValue(genericParameter, out Cecil.TypeReference cecilParam))
+                {
                     return cecilParam;
+                }
 
                 cecilParam = GetGenericParameter(genericParameter);
                 typesCache[genericParameter] = cecilParam;
@@ -306,14 +357,18 @@ namespace CodeGenerator.CecilCodeGenerator
             else if (genericParameter.Kind == AnalysisNet.Types.GenericParameterKind.Method)
             {
                 if (typesCache.TryGetValue(genericParameter, out Cecil.TypeReference cecilParam))
+                {
                     return cecilParam;
+                }
 
                 cecilParam = GetGenericParameter(genericParameter);
                 typesCache[genericParameter] = cecilParam;
                 return cecilParam;
             }
             else
+            {
                 throw new NotImplementedException();
+            }
         }
     }
 }

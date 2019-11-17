@@ -1,10 +1,10 @@
-﻿using AnalysisNet = Model;
-using AnalysisNetTac = Model.ThreeAddressCode;
-using AnalysisNetBytecode = Model.Bytecode;
-using Cecil = Mono.Cecil;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using AnalysisNet = Model;
+using AnalysisNetBytecode = Model.Bytecode;
+using AnalysisNetTac = Model.ThreeAddressCode;
+using Cecil = Mono.Cecil;
 
 namespace CecilProvider
 {
@@ -14,86 +14,54 @@ namespace CecilProvider
 
         public FakeArrayType(AnalysisNet.Types.ArrayType type)
         {
-            this.Type = type;
+            Type = type;
         }
 
-        public AnalysisNet.IAssemblyReference ContainingAssembly
-        {
-            get { return null; }
-        }
+        public AnalysisNet.IAssemblyReference ContainingAssembly => null;
 
-        public string ContainingNamespace
-        {
-            get { return string.Empty; }
-        }
+        public string ContainingNamespace => string.Empty;
 
-        public string Name
-        {
-            get { return "FakeArray"; }
-        }
+        public string Name => "FakeArray";
 
-        public string GenericName
-        {
-            get { return this.Name; }
-        }
+        public string GenericName => Name;
 
-        public IList<AnalysisNet.Types.IType> GenericArguments
-        {
-            get { return null; }
-        }
+        public IList<AnalysisNet.Types.IType> GenericArguments => null;
 
-        public AnalysisNet.Types.IBasicType GenericType
-        {
-            get { return null; }
-        }
+        public AnalysisNet.Types.IBasicType GenericType => null;
 
-        public AnalysisNet.Types.TypeDefinition ResolvedType
-        {
-            get { return null; }
-        }
+        public AnalysisNet.Types.TypeDefinition ResolvedType => null;
 
-        public AnalysisNet.Types.TypeKind TypeKind
-        {
-            get { return AnalysisNet.Types.TypeKind.ReferenceType; }
-        }
+        public AnalysisNet.Types.TypeKind TypeKind => AnalysisNet.Types.TypeKind.ReferenceType;
 
-        public ISet<AnalysisNet.Types.CustomAttribute> Attributes
-        {
-            get { return null; }
-        }
+        public ISet<AnalysisNet.Types.CustomAttribute> Attributes => null;
 
-        public int GenericParameterCount
-        {
-            get { return 0; }
-        }
+        public int GenericParameterCount => 0;
 
-        public AnalysisNet.Types.IBasicType ContainingType
-        {
-            get { return null; }
-        }
+        public AnalysisNet.Types.IBasicType ContainingType => null;
     }
 
     internal class CodeProvider
     {
-        private TypeExtractor typeExtractor;
-        private IDictionary<int, AnalysisNetTac.Values.IVariable> parameters;
-        private IDictionary<int, AnalysisNetTac.Values.IVariable> locals;
+        private readonly TypeExtractor typeExtractor;
+        private readonly IDictionary<int, AnalysisNetTac.Values.IVariable> parameters;
+        private readonly IDictionary<int, AnalysisNetTac.Values.IVariable> locals;
         private AnalysisNetTac.Values.IVariable thisParameter;
 
         private Cecil.Cil.MethodBody cecilBody;
         public CodeProvider(TypeExtractor typeExtractor)
         {
             this.typeExtractor = typeExtractor;
-            this.parameters = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
-            this.locals = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
+            parameters = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
+            locals = new Dictionary<int, AnalysisNetTac.Values.IVariable>();
         }
-        
+
         public AnalysisNet.Types.MethodBody ExtractBody(Cecil.Cil.MethodBody cciBody)
         {
             cecilBody = cciBody;
-            var ourBody = new AnalysisNet.Types.MethodBody(AnalysisNet.Types.MethodBodyKind.Bytecode);
-
-            ourBody.MaxStack = (ushort)cciBody.MaxStackSize;
+            AnalysisNet.Types.MethodBody ourBody = new AnalysisNet.Types.MethodBody(AnalysisNet.Types.MethodBodyKind.Bytecode)
+            {
+                MaxStack = (ushort)cciBody.MaxStackSize
+            };
             ExtractParameters(cciBody.Method, ourBody.Parameters);
             ExtractLocalVariables(cciBody.Variables, ourBody.LocalVariables);
             ExtractExceptionInformation(cciBody.ExceptionHandlers, ourBody.ExceptionInformation);
@@ -106,17 +74,17 @@ namespace CecilProvider
         {
             if (!methoddef.IsStatic)
             {
-                var type = typeExtractor.ExtractType(methoddef.DeclaringType);
-                var v = new AnalysisNetTac.Values.LocalVariable("this", true) { Type = type };
+                AnalysisNet.Types.IType type = typeExtractor.ExtractType(methoddef.DeclaringType);
+                AnalysisNetTac.Values.LocalVariable v = new AnalysisNetTac.Values.LocalVariable("this", true) { Type = type };
 
                 ourParameters.Add(v);
                 thisParameter = v;
             }
 
-            foreach (var parameter in methoddef.Parameters)
+            foreach (Cecil.ParameterDefinition parameter in methoddef.Parameters)
             {
-                var type = typeExtractor.ExtractType(parameter.ParameterType);
-                var v = new AnalysisNetTac.Values.LocalVariable(parameter.Name, true) { Type = type };
+                AnalysisNet.Types.IType type = typeExtractor.ExtractType(parameter.ParameterType);
+                AnalysisNetTac.Values.LocalVariable v = new AnalysisNetTac.Values.LocalVariable(parameter.Name, true) { Type = type };
 
                 ourParameters.Add(v);
                 parameters.Add(parameter.Index, v);
@@ -125,11 +93,11 @@ namespace CecilProvider
 
         private void ExtractLocalVariables(IEnumerable<Cecil.Cil.VariableDefinition> cciLocalVariables, IList<AnalysisNetTac.Values.IVariable> ourLocalVariables)
         {
-            foreach (var local in cciLocalVariables)
+            foreach (Cecil.Cil.VariableDefinition local in cciLocalVariables)
             {
-                var name = GetLocalSourceName(local);
-                var type = typeExtractor.ExtractType(local.VariableType);
-                var v = new AnalysisNetTac.Values.LocalVariable(name) { Type = type };
+                string name = GetLocalSourceName(local);
+                AnalysisNet.Types.IType type = typeExtractor.ExtractType(local.VariableType);
+                AnalysisNetTac.Values.LocalVariable v = new AnalysisNetTac.Values.LocalVariable(name) { Type = type };
 
                 ourLocalVariables.Add(v);
                 locals.Add(local.Index, v);
@@ -138,31 +106,31 @@ namespace CecilProvider
 
         private void ExtractExceptionInformation(IEnumerable<Cecil.Cil.ExceptionHandler> cciExceptionInformation, IList<AnalysisNet.ProtectedBlock> ourExceptionInformation)
         {
-            foreach (var cciExceptionInfo in cciExceptionInformation)
+            foreach (Cecil.Cil.ExceptionHandler cciExceptionInfo in cciExceptionInformation)
             {
-                var tryHandler = new AnalysisNet.ProtectedBlock((uint)cciExceptionInfo.TryStart.Offset, (uint)cciExceptionInfo.TryEnd.Offset);
+                AnalysisNet.ProtectedBlock tryHandler = new AnalysisNet.ProtectedBlock((uint)cciExceptionInfo.TryStart.Offset, (uint)cciExceptionInfo.TryEnd.Offset);
 
                 switch (cciExceptionInfo.HandlerType)
                 {
                     case Cecil.Cil.ExceptionHandlerType.Filter:
-                        var filterExceptionType = typeExtractor.ExtractType(cciExceptionInfo.CatchType);
-                        var filterHandler = new AnalysisNet.FilterExceptionHandler((uint)cciExceptionInfo.FilterStart.Offset, (uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset, filterExceptionType);
+                        AnalysisNet.Types.IType filterExceptionType = typeExtractor.ExtractType(cciExceptionInfo.CatchType);
+                        AnalysisNet.FilterExceptionHandler filterHandler = new AnalysisNet.FilterExceptionHandler((uint)cciExceptionInfo.FilterStart.Offset, (uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset, filterExceptionType);
                         tryHandler.Handler = filterHandler;
                         break;
 
                     case Cecil.Cil.ExceptionHandlerType.Catch:
-                        var catchExceptionType = typeExtractor.ExtractType(cciExceptionInfo.CatchType);
-                        var catchHandler = new AnalysisNet.CatchExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset, catchExceptionType);
+                        AnalysisNet.Types.IType catchExceptionType = typeExtractor.ExtractType(cciExceptionInfo.CatchType);
+                        AnalysisNet.CatchExceptionHandler catchHandler = new AnalysisNet.CatchExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset, catchExceptionType);
                         tryHandler.Handler = catchHandler;
                         break;
 
                     case Cecil.Cil.ExceptionHandlerType.Fault:
-                        var faultHandler = new AnalysisNet.FaultExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset);
+                        AnalysisNet.FaultExceptionHandler faultHandler = new AnalysisNet.FaultExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset);
                         tryHandler.Handler = faultHandler;
                         break;
 
                     case Cecil.Cil.ExceptionHandlerType.Finally:
-                        var finallyHandler = new AnalysisNet.FinallyExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset);
+                        AnalysisNet.FinallyExceptionHandler finallyHandler = new AnalysisNet.FinallyExceptionHandler((uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset);
                         tryHandler.Handler = finallyHandler;
                         break;
 
@@ -176,9 +144,9 @@ namespace CecilProvider
 
         private void ExtractInstructions(IEnumerable<Cecil.Cil.Instruction> operations, IList<AnalysisNet.IInstruction> instructions)
         {
-            foreach (var op in operations)
+            foreach (Cecil.Cil.Instruction op in operations)
             {
-                var instruction = ExtractInstruction(op);
+                AnalysisNet.IInstruction instruction = ExtractInstruction(op);
                 instructions.Add(instruction);
             }
         }
@@ -188,7 +156,7 @@ namespace CecilProvider
             AnalysisNet.IInstruction instruction = null;
 
             // cecil does not have an enum we require it for the switch statement
-            var code = operation.OpCode.Code;
+            Cecil.Cil.Code code = operation.OpCode.Code;
             switch (code)
             {
                 case Mono.Cecil.Cil.Code.Add:
@@ -604,13 +572,13 @@ namespace CecilProvider
 
         private AnalysisNet.IInstruction ProcessLoadArrayElement(Cecil.Cil.Instruction op, AnalysisNetBytecode.LoadArrayElementOperation operation, AnalysisNet.Types.ArrayType arrayType = null)
         {
-            var instruction = new AnalysisNetBytecode.LoadArrayElementInstruction((uint)op.Offset, operation, arrayType);
+            AnalysisNetBytecode.LoadArrayElementInstruction instruction = new AnalysisNetBytecode.LoadArrayElementInstruction((uint)op.Offset, operation, arrayType);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessStoreArrayElement(Cecil.Cil.Instruction op, AnalysisNet.Types.ArrayType arrayType)
         {
-            var instruction = new AnalysisNetBytecode.StoreArrayElementInstruction((uint)op.Offset, arrayType);
+            AnalysisNetBytecode.StoreArrayElementInstruction instruction = new AnalysisNetBytecode.StoreArrayElementInstruction((uint)op.Offset, arrayType);
             return instruction;
         }
 
@@ -625,7 +593,7 @@ namespace CecilProvider
                 //    break;
                 //case Mono.Cecil.Cil.Code.Stelem:
                 case Mono.Cecil.Cil.Code.Stelem_Any:
-                    var extractedType = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
+                    AnalysisNet.Types.IType extractedType = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
                     arrayType = new AnalysisNet.Types.ArrayType(extractedType);
                     break;
                 default:
@@ -634,9 +602,11 @@ namespace CecilProvider
             }
 
             if (arrayType == null)
+            {
                 throw new NotImplementedException();
+            }
 
-            var instruction = new AnalysisNetBytecode.StoreArrayElementInstruction((uint)op.Offset, arrayType);
+            AnalysisNetBytecode.StoreArrayElementInstruction instruction = new AnalysisNetBytecode.StoreArrayElementInstruction((uint)op.Offset, arrayType);
             return instruction;
         }
 
@@ -664,64 +634,68 @@ namespace CecilProvider
             }
 
             if (arrayType == null)
+            {
                 throw new NotImplementedException();
+            }
 
-            var instruction = new AnalysisNetBytecode.LoadArrayElementInstruction((uint)op.Offset, operation, arrayType);
+            AnalysisNetBytecode.LoadArrayElementInstruction instruction = new AnalysisNetBytecode.LoadArrayElementInstruction((uint)op.Offset, operation, arrayType);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessConstrained(Cecil.Cil.Instruction op)
         {
-            var thisType = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
-            var ins = new AnalysisNetBytecode.ConstrainedInstruction((uint)op.Offset, thisType);
+            AnalysisNet.Types.IType thisType = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
+            AnalysisNetBytecode.ConstrainedInstruction ins = new AnalysisNetBytecode.ConstrainedInstruction((uint)op.Offset, thisType);
             return ins;
         }
 
         private AnalysisNet.IInstruction ProcessSwitch(Cecil.Cil.Instruction op)
         {
-            var targets = op.Operand as Cecil.Cil.Instruction[];
+            Cecil.Cil.Instruction[] targets = op.Operand as Cecil.Cil.Instruction[];
 
-            var instruction = new AnalysisNetBytecode.SwitchInstruction((uint)op.Offset, targets.Select(t => (uint)t.Offset));
+            AnalysisNetBytecode.SwitchInstruction instruction = new AnalysisNetBytecode.SwitchInstruction((uint)op.Offset, targets.Select(t => (uint)t.Offset));
             return instruction;
         }
         private AnalysisNet.IInstruction ProcessCreateArray(Cecil.Cil.Instruction op)
         {
-            var cciArrayType = Cecil.Rocks.TypeReferenceRocks.MakeArrayType(op.Operand as Cecil.TypeReference);
-            var ourArrayType = typeExtractor.ExtractType(cciArrayType) as AnalysisNet.Types.ArrayType;
+            Cecil.ArrayType cciArrayType = Cecil.Rocks.TypeReferenceRocks.MakeArrayType(op.Operand as Cecil.TypeReference);
+            AnalysisNet.Types.ArrayType ourArrayType = typeExtractor.ExtractType(cciArrayType) as AnalysisNet.Types.ArrayType;
 
             return CreateArray((uint)op.Offset, ourArrayType);
         }
         private AnalysisNet.IInstruction CreateArray(uint offset, AnalysisNet.Types.ArrayType arrayType, bool withLowerBound = false)
         {
-            var instruction = new AnalysisNetBytecode.CreateArrayInstruction(offset, arrayType);
-            instruction.WithLowerBound = withLowerBound;
+            AnalysisNetBytecode.CreateArrayInstruction instruction = new AnalysisNetBytecode.CreateArrayInstruction(offset, arrayType)
+            {
+                WithLowerBound = withLowerBound
+            };
             return instruction;
         }
         private AnalysisNet.IInstruction ProcessCreateObject(Cecil.Cil.Instruction op)
         {
-            var cciMethod = op.Operand as Cecil.MethodReference;
-            var ourMethod = typeExtractor.ExtractMethod(cciMethod);
+            Cecil.MethodReference cciMethod = op.Operand as Cecil.MethodReference;
+            AnalysisNet.Types.IMethodReference ourMethod = typeExtractor.ExtractMethod(cciMethod);
 
             if (ourMethod.ContainingType is FakeArrayType fakeArrayType)
             {
-                var withLowerBounds = ourMethod.Parameters.Count > fakeArrayType.Type.Rank;
+                bool withLowerBounds = ourMethod.Parameters.Count > fakeArrayType.Type.Rank;
                 return CreateArray((uint)op.Offset, fakeArrayType.Type, withLowerBounds);
             }
 
-            var instruction = new AnalysisNetBytecode.CreateObjectInstruction((uint)op.Offset, ourMethod);
+            AnalysisNetBytecode.CreateObjectInstruction instruction = new AnalysisNetBytecode.CreateObjectInstruction((uint)op.Offset, ourMethod);
             return instruction;
         }
         private AnalysisNet.IInstruction ProcessMethodCall(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToMethodCallOperation(op.OpCode.Code);
-            var cciMethod = op.Operand as Cecil.MethodReference;
-            var ourMethod = typeExtractor.ExtractMethod(cciMethod);
+            AnalysisNetBytecode.MethodCallOperation operation = OperationHelper.ToMethodCallOperation(op.OpCode.Code);
+            Cecil.MethodReference cciMethod = op.Operand as Cecil.MethodReference;
+            AnalysisNet.Types.IMethodReference ourMethod = typeExtractor.ExtractMethod(cciMethod);
 
             AnalysisNet.IInstruction instruction;
 
             if (ourMethod.ContainingType is FakeArrayType fakeArrayType)
             {
-                var arrayType = fakeArrayType.Type;
+                AnalysisNet.Types.ArrayType arrayType = fakeArrayType.Type;
 
                 if (ourMethod.Name == "Set")
                 {
@@ -730,7 +704,7 @@ namespace CecilProvider
                 }
                 else
                 {
-                    var arrayOp = OperationHelper.ToLoadArrayElementOperation(ourMethod.Name);
+                    AnalysisNetBytecode.LoadArrayElementOperation arrayOp = OperationHelper.ToLoadArrayElementOperation(ourMethod.Name);
 
                     instruction = ProcessLoadArrayElement(op, arrayOp, arrayType);
                     return instruction;
@@ -743,71 +717,73 @@ namespace CecilProvider
 
         private AnalysisNet.IInstruction ProcessMethodCallIndirect(Cecil.Cil.Instruction op)
         {
-            var cciFunctionPointer = op.Operand as Cecil.FunctionPointerType;
-            var ourFunctionPointer = typeExtractor.ExtractType(cciFunctionPointer) as AnalysisNet.Types.FunctionPointerType;
+            Cecil.FunctionPointerType cciFunctionPointer = op.Operand as Cecil.FunctionPointerType;
+            AnalysisNet.Types.FunctionPointerType ourFunctionPointer = typeExtractor.ExtractType(cciFunctionPointer) as AnalysisNet.Types.FunctionPointerType;
 
-            var instruction = new AnalysisNetBytecode.IndirectMethodCallInstruction((uint)op.Offset, ourFunctionPointer);
+            AnalysisNetBytecode.IndirectMethodCallInstruction instruction = new AnalysisNetBytecode.IndirectMethodCallInstruction((uint)op.Offset, ourFunctionPointer);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessSizeof(Cecil.Cil.Instruction op)
         {
-            var cciType = op.Operand as Cecil.TypeReference;
-            var ourType = typeExtractor.ExtractType(cciType);
+            Cecil.TypeReference cciType = op.Operand as Cecil.TypeReference;
+            AnalysisNet.Types.IType ourType = typeExtractor.ExtractType(cciType);
 
-            var instruction = new AnalysisNetBytecode.SizeofInstruction((uint)op.Offset, ourType);
+            AnalysisNetBytecode.SizeofInstruction instruction = new AnalysisNetBytecode.SizeofInstruction((uint)op.Offset, ourType);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessUnaryConditionalBranch(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToBranchOperation(op.OpCode.Code);
-            var target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
+            AnalysisNetBytecode.BranchOperation operation = OperationHelper.ToBranchOperation(op.OpCode.Code);
+            uint target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
 
-            var instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, operation, target);
+            AnalysisNetBytecode.BranchInstruction instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, operation, target);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessBinaryConditionalBranch(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToBranchOperation(op.OpCode.Code);
-            var unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
-            var target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
+            AnalysisNetBytecode.BranchOperation operation = OperationHelper.ToBranchOperation(op.OpCode.Code);
+            bool unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
+            uint target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
 
-            var instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, operation, target);
-            instruction.UnsignedOperands = unsigned;
+            AnalysisNetBytecode.BranchInstruction instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, operation, target)
+            {
+                UnsignedOperands = unsigned
+            };
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLeave(Cecil.Cil.Instruction op)
         {
-            var target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
-            var instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, AnalysisNetBytecode.BranchOperation.Leave, target);
+            uint target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
+            AnalysisNetBytecode.BranchInstruction instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, AnalysisNetBytecode.BranchOperation.Leave, target);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessUnconditionalBranch(Cecil.Cil.Instruction op)
         {
-            var target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
-            var instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, AnalysisNetBytecode.BranchOperation.Branch, target);
+            uint target = (uint)((Cecil.Cil.Instruction)op.Operand).Offset;
+            AnalysisNetBytecode.BranchInstruction instruction = new AnalysisNetBytecode.BranchInstruction((uint)op.Offset, AnalysisNetBytecode.BranchOperation.Branch, target);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadConstant(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
-            var type = OperationHelper.GetOperationType(op.OpCode.Code);
-            var value = OperationHelper.GetOperationConstant(op);
-            var source = new AnalysisNetTac.Values.Constant(value) { Type = type };
+            AnalysisNetBytecode.LoadOperation operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
+            AnalysisNet.Types.IType type = OperationHelper.GetOperationType(op.OpCode.Code);
+            object value = OperationHelper.GetOperationConstant(op);
+            AnalysisNetTac.Values.Constant source = new AnalysisNetTac.Values.Constant(value) { Type = type };
 
-            var instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
+            AnalysisNetBytecode.LoadInstruction instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadArgument(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
-            var source = thisParameter;
+            AnalysisNetBytecode.LoadOperation operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
+            AnalysisNetTac.Values.IVariable source = thisParameter;
 
             int argIdx = -1;
             switch (op.OpCode.Code)
@@ -821,30 +797,34 @@ namespace CecilProvider
             if (argIdx > -1)
             {
                 if (thisParameter != null && argIdx == 0)
+                {
                     source = thisParameter;
+                }
                 else
                 {
-                    var hasThis = thisParameter != null ? 1 : 0;
+                    int hasThis = thisParameter != null ? 1 : 0;
                     source = parameters[argIdx - hasThis];
                 }
             }
-            
+
             if (op.Operand is Cecil.ParameterDefinition)
             {
-                var parameter = op.Operand as Cecil.ParameterDefinition;
+                Cecil.ParameterDefinition parameter = op.Operand as Cecil.ParameterDefinition;
                 source = parameters[parameter.Index];
             }
 
             if (source == null)
+            {
                 throw new Exception("source cannot be null.");
+            }
 
-            var instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
+            AnalysisNetBytecode.LoadInstruction instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadLocal(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
+            AnalysisNetBytecode.LoadOperation operation = OperationHelper.ToLoadOperation(op.OpCode.Code);
 
             AnalysisNetTac.Values.IVariable source = null;
             int localIdx = -1;
@@ -865,61 +845,66 @@ namespace CecilProvider
             }
 
             if (localIdx > -1)
+            {
                 source = locals[localIdx];
+            }
 
-            var instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
+            AnalysisNetBytecode.LoadInstruction instruction = new AnalysisNetBytecode.LoadInstruction((uint)op.Offset, operation, source);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadIndirect(Cecil.Cil.Instruction op)
         {
-            var type = OperationHelper.GetOperationType(op.OpCode.Code);
+            AnalysisNet.Types.IType type = OperationHelper.GetOperationType(op.OpCode.Code);
             if (op.OpCode.Code == Mono.Cecil.Cil.Code.Ldobj)
+            {
                 type = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
-            var instruction = new AnalysisNetBytecode.LoadIndirectInstruction((uint)op.Offset, type);
+            }
+
+            AnalysisNetBytecode.LoadIndirectInstruction instruction = new AnalysisNetBytecode.LoadIndirectInstruction((uint)op.Offset, type);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadField(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToLoadFieldOperation(op.OpCode.Code);
-            var cciField = op.Operand as Cecil.FieldReference;
+            AnalysisNetBytecode.LoadFieldOperation operation = OperationHelper.ToLoadFieldOperation(op.OpCode.Code);
+            Cecil.FieldReference cciField = op.Operand as Cecil.FieldReference;
             bool isStatic = op.OpCode.Code == Cecil.Cil.OpCodes.Ldsfld.Code || op.OpCode.Code == Cecil.Cil.OpCodes.Ldsflda.Code;
-            var ourField = typeExtractor.ExtractField(cciField, isStatic);
+            AnalysisNet.Types.FieldReference ourField = typeExtractor.ExtractField(cciField, isStatic);
 
-            var instruction = new AnalysisNetBytecode.LoadFieldInstruction((uint)op.Offset, operation, ourField);
+            AnalysisNetBytecode.LoadFieldInstruction instruction = new AnalysisNetBytecode.LoadFieldInstruction((uint)op.Offset, operation, ourField);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadMethodAddress(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToLoadMethodAddressOperation(op.OpCode.Code);
-            var cciMethod = op.Operand as Cecil.MethodReference;
-            var ourMethod = typeExtractor.ExtractMethod(cciMethod);
+            AnalysisNetBytecode.LoadMethodAddressOperation operation = OperationHelper.ToLoadMethodAddressOperation(op.OpCode.Code);
+            Cecil.MethodReference cciMethod = op.Operand as Cecil.MethodReference;
+            AnalysisNet.Types.IMethodReference ourMethod = typeExtractor.ExtractMethod(cciMethod);
 
-            var instruction = new AnalysisNetBytecode.LoadMethodAddressInstruction((uint)op.Offset, operation, ourMethod);
+            AnalysisNetBytecode.LoadMethodAddressInstruction instruction = new AnalysisNetBytecode.LoadMethodAddressInstruction((uint)op.Offset, operation, ourMethod);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessLoadToken(Cecil.Cil.Instruction op)
         {
-            var cciToken = op.Operand as Cecil.MemberReference;
-            var ourToken = typeExtractor.ExtractToken(cciToken);
+            Cecil.MemberReference cciToken = op.Operand as Cecil.MemberReference;
+            AnalysisNet.Types.IMetadataReference ourToken = typeExtractor.ExtractToken(cciToken);
 
-            var instruction = new AnalysisNetBytecode.LoadTokenInstruction((uint)op.Offset, ourToken);
+            AnalysisNetBytecode.LoadTokenInstruction instruction = new AnalysisNetBytecode.LoadTokenInstruction((uint)op.Offset, ourToken);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessStoreArgument(Cecil.Cil.Instruction op)
         {
-            var dest = thisParameter;
+            AnalysisNetTac.Values.IVariable dest = thisParameter;
 
             if (op.Operand is Cecil.ParameterDefinition parameter)
             {
                 dest = parameters[parameter.Index];
             }
 
-            var instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
+            AnalysisNetBytecode.StoreInstruction instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
             return instruction;
         }
 
@@ -930,8 +915,8 @@ namespace CecilProvider
             switch (op.OpCode.Code)
             {
                 case Mono.Cecil.Cil.Code.Stloc_S:
-                case Mono.Cecil.Cil.Code.Stloc: variable = (Cecil.Cil.VariableDefinition)op.Operand;  break;
-                case Mono.Cecil.Cil.Code.Stloc_0: localIdx = 0; break; 
+                case Mono.Cecil.Cil.Code.Stloc: variable = (Cecil.Cil.VariableDefinition)op.Operand; break;
+                case Mono.Cecil.Cil.Code.Stloc_0: localIdx = 0; break;
                 case Mono.Cecil.Cil.Code.Stloc_1: localIdx = 1; break;
                 case Mono.Cecil.Cil.Code.Stloc_2: localIdx = 2; break;
                 case Mono.Cecil.Cil.Code.Stloc_3: localIdx = 3; break;
@@ -941,58 +926,67 @@ namespace CecilProvider
 
             AnalysisNetTac.Values.IVariable dest;
             if (variable != null)
+            {
                 dest = locals[variable.Index];
+            }
             else
+            {
                 dest = locals[localIdx];
+            }
 
-            var instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
+            AnalysisNetBytecode.StoreInstruction instruction = new AnalysisNetBytecode.StoreInstruction((uint)op.Offset, dest);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessStoreIndirect(Cecil.Cil.Instruction op)
         {
-            var type = OperationHelper.GetOperationType(op.OpCode.Code);
+            AnalysisNet.Types.IType type = OperationHelper.GetOperationType(op.OpCode.Code);
             if (op.OpCode.Code == Mono.Cecil.Cil.Code.Stobj)
+            {
                 type = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
-            var instruction = new AnalysisNetBytecode.StoreIndirectInstruction((uint)op.Offset, type);
+            }
+
+            AnalysisNetBytecode.StoreIndirectInstruction instruction = new AnalysisNetBytecode.StoreIndirectInstruction((uint)op.Offset, type);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessStoreField(Cecil.Cil.Instruction op)
         {
-            var cciField = op.Operand as Cecil.FieldReference;//op.Operand as Cci.IFieldReference;
-            var ourField = typeExtractor.ExtractField(cciField, op.OpCode.Code == Cecil.Cil.Code.Stsfld);
+            Cecil.FieldReference cciField = op.Operand as Cecil.FieldReference;//op.Operand as Cci.IFieldReference;
+            AnalysisNet.Types.FieldReference ourField = typeExtractor.ExtractField(cciField, op.OpCode.Code == Cecil.Cil.Code.Stsfld);
 
-            var instruction = new AnalysisNetBytecode.StoreFieldInstruction((uint)op.Offset, ourField);
+            AnalysisNetBytecode.StoreFieldInstruction instruction = new AnalysisNetBytecode.StoreFieldInstruction((uint)op.Offset, ourField);
             return instruction;
         }
         private AnalysisNet.IInstruction ProcessInitObj(Cecil.Cil.Instruction op)
         {
-            var type = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
-            var instruction = new AnalysisNetBytecode.InitObjInstruction((uint)op.Offset, type);
+            AnalysisNet.Types.IType type = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
+            AnalysisNetBytecode.InitObjInstruction instruction = new AnalysisNetBytecode.InitObjInstruction((uint)op.Offset, type);
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessBasic(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToBasicOperation(op.OpCode.Code);
-            var overflow = OperationHelper.PerformsOverflowCheck(op.OpCode.Code);
-            var unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
+            AnalysisNetBytecode.BasicOperation operation = OperationHelper.ToBasicOperation(op.OpCode.Code);
+            bool overflow = OperationHelper.PerformsOverflowCheck(op.OpCode.Code);
+            bool unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
 
-            var instruction = new AnalysisNetBytecode.BasicInstruction((uint)op.Offset, operation);
-            instruction.OverflowCheck = overflow;
-            instruction.UnsignedOperands = unsigned;
+            AnalysisNetBytecode.BasicInstruction instruction = new AnalysisNetBytecode.BasicInstruction((uint)op.Offset, operation)
+            {
+                OverflowCheck = overflow,
+                UnsignedOperands = unsigned
+            };
             return instruction;
         }
 
         private AnalysisNet.IInstruction ProcessConversion(Cecil.Cil.Instruction op)
         {
-            var operation = OperationHelper.ToConvertOperation(op.OpCode.Code);
-            var overflow = OperationHelper.PerformsOverflowCheck(op.OpCode.Code);
-            var unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
+            AnalysisNetBytecode.ConvertOperation operation = OperationHelper.ToConvertOperation(op.OpCode.Code);
+            bool overflow = OperationHelper.PerformsOverflowCheck(op.OpCode.Code);
+            bool unsigned = OperationHelper.OperandsAreUnsigned(op.OpCode.Code);
 
-            var cciType = op.Operand as Cecil.TypeReference;
-            var ourType = OperationHelper.GetOperationType(op.OpCode.Code);
+            Cecil.TypeReference cciType = op.Operand as Cecil.TypeReference;
+            AnalysisNet.Types.IType ourType = OperationHelper.GetOperationType(op.OpCode.Code);
 
             if (operation == AnalysisNetBytecode.ConvertOperation.Box)
             {
@@ -1001,21 +995,24 @@ namespace CecilProvider
             else if (operation == AnalysisNetBytecode.ConvertOperation.Conv)
             {
                 ourType = OperationHelper.GetOperationType(op.OpCode.Code);
-            } else if (operation == AnalysisNetBytecode.ConvertOperation.Cast)
+            }
+            else if (operation == AnalysisNetBytecode.ConvertOperation.Cast)
             {
                 ourType = typeExtractor.ExtractType(op.Operand as Cecil.TypeReference);
             }
-            
-            var instruction = new AnalysisNetBytecode.ConvertInstruction((uint)op.Offset, operation, ourType);
-            instruction.OverflowCheck = overflow;
-            instruction.UnsignedOperands = unsigned;
+
+            AnalysisNetBytecode.ConvertInstruction instruction = new AnalysisNetBytecode.ConvertInstruction((uint)op.Offset, operation, ourType)
+            {
+                OverflowCheck = overflow,
+                UnsignedOperands = unsigned
+            };
             return instruction;
         }
 
         private string GetLocalSourceName(Cecil.Cil.VariableDefinition local)
         {
             //var name = local.Name.Value;
-            var name = local.ToString();
+            string name = local.ToString();
 
             //if (sourceLocationProvider != null)
             //{

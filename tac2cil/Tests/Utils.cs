@@ -1,16 +1,11 @@
 ﻿using Backend.Analyses;
 using Backend.Transformations;
 using Model.Types;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Tests
 {
-    class Utils
+    internal class Utils
     {
         public static string GetTemporaryDirectory()
         {
@@ -21,29 +16,29 @@ namespace Tests
 
         public static void TransformToTac(MethodDefinition method)
         {
-            var disassembler = new Disassembler(method);
-            var methodBody = disassembler.Execute();
+            Disassembler disassembler = new Disassembler(method);
+            MethodBody methodBody = disassembler.Execute();
             method.Body = methodBody;
 
-            var cfAnalysis = new ControlFlowAnalysis(method.Body);
+            ControlFlowAnalysis cfAnalysis = new ControlFlowAnalysis(method.Body);
             //var cfg = cfAnalysis.GenerateNormalControlFlow();
-            var cfg = cfAnalysis.GenerateExceptionalControlFlow();
+            Backend.Model.ControlFlowGraph cfg = cfAnalysis.GenerateExceptionalControlFlow();
 
-            var splitter = new WebAnalysis(cfg);
+            WebAnalysis splitter = new WebAnalysis(cfg);
             splitter.Analyze();
             splitter.Transform();
 
             methodBody.UpdateVariables();
 
-            var typeAnalysis = new TypeInferenceAnalysis(cfg, method.ReturnType);
+            TypeInferenceAnalysis typeAnalysis = new TypeInferenceAnalysis(cfg, method.ReturnType);
             typeAnalysis.Analyze();
 
             // Copy Propagation
-            var forwardCopyAnalysis = new ForwardCopyPropagationAnalysis(cfg);
+            ForwardCopyPropagationAnalysis forwardCopyAnalysis = new ForwardCopyPropagationAnalysis(cfg);
             forwardCopyAnalysis.Analyze();
             forwardCopyAnalysis.Transform(methodBody);
 
-            var backwardCopyAnalysis = new BackwardCopyPropagationAnalysis(cfg);
+            BackwardCopyPropagationAnalysis backwardCopyAnalysis = new BackwardCopyPropagationAnalysis(cfg);
             backwardCopyAnalysis.Analyze();
             backwardCopyAnalysis.Transform(methodBody);
 

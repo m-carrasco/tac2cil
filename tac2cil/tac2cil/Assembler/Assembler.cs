@@ -1,15 +1,15 @@
-﻿using Model.ThreeAddressCode.Instructions;
+﻿using Backend.Analyses;
+using Backend.Model;
+using Model;
+using Model.ThreeAddressCode.Instructions;
+using Model.ThreeAddressCode.Values;
 using Model.ThreeAddressCode.Visitor;
 using Model.Types;
-using Model.ThreeAddressCode.Values;
-using Bytecode = Model.Bytecode;
-using System.Diagnostics.Contracts;
-using System.Collections.Generic;
 using System;
-using Model;
-using Backend.Analyses;
-using Backend.Model;
+using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using Bytecode = Model.Bytecode;
 
 namespace tac2cil.Assembler
 {
@@ -26,29 +26,33 @@ namespace tac2cil.Assembler
                 _s = new Stack<bool>();
             }
 
-            public IEnumerable<bool> Variables
-            {
-                get { return _s; }
-            }
+            public IEnumerable<bool> Variables => _s;
 
             public ushort MaxCapacity { get; private set; }
 
             public ushort Size
             {
-                get { return (ushort)_s.Count; }
+                get => (ushort)_s.Count;
                 set
                 {
-                    if (value < 0) throw new InvalidOperationException();
+                    if (value < 0)
+                    {
+                        throw new InvalidOperationException();
+                    }
 
                     if (value >= _s.Count)
                     {
                         for (int i = 0; i > (value - _s.Count); i++)
+                        {
                             _s.Push(true);
+                        }
                     }
                     else
                     {
                         for (int i = 0; i > (_s.Count - value); i++)
+                        {
                             _s.Pop();
+                        }
                     }
                 }
             }
@@ -73,7 +77,9 @@ namespace tac2cil.Assembler
             public void Push()
             {
                 if (_s.Count >= MaxCapacity)
+                {
                     MaxCapacity++;
+                }
 
                 _s.Push(true);
             }
@@ -86,8 +92,8 @@ namespace tac2cil.Assembler
 
         #endregion
 
-        private MethodBody _tacBody;
-        private OperandStack _stack;
+        private readonly MethodBody _tacBody;
+        private readonly OperandStack _stack;
 
         public Assembler(MethodBody b)
         {
@@ -108,24 +114,26 @@ namespace tac2cil.Assembler
             if (_tacBody.Instructions.Count > 0)
             {
                 InstructionConverter instructionConverter = new InstructionConverter(_stack);
-                var cfanalysis = new ControlFlowAnalysis(_tacBody);
+                ControlFlowAnalysis cfanalysis = new ControlFlowAnalysis(_tacBody);
                 // exceptions disabled for now
-                var cfg = cfanalysis.GenerateNormalControlFlow();
-                var stackSizeAtEntry = new ushort?[cfg.Nodes.Count];
-                var sorted_nodes = cfg.ForwardOrder;
+                ControlFlowGraph cfg = cfanalysis.GenerateNormalControlFlow();
+                ushort?[] stackSizeAtEntry = new ushort?[cfg.Nodes.Count];
+                CFGNode[] sorted_nodes = cfg.ForwardOrder;
 
                 //FillExceptionHandlersStart();
-                foreach (var node in sorted_nodes)
+                foreach (CFGNode node in sorted_nodes)
                 {
-                    var stackSize = stackSizeAtEntry[node.Id];
+                    ushort? stackSize = stackSizeAtEntry[node.Id];
 
                     if (!stackSize.HasValue)
+                    {
                         stackSizeAtEntry[node.Id] = 0;
+                    }
 
                     _stack.Size = stackSizeAtEntry[node.Id].Value;
-                    this.ProcessBasicBlock(bytecodeBody, node, instructionConverter);
+                    ProcessBasicBlock(bytecodeBody, node, instructionConverter);
 
-                    foreach (var successor in node.Successors)
+                    foreach (CFGNode successor in node.Successors)
                     {
                         // exceptions disabled for now
                         //var successorIsHandlerHeader = false;
@@ -138,8 +146,9 @@ namespace tac2cil.Assembler
                         stackSize = stackSizeAtEntry[successor.Id];
 
                         if (!stackSize.HasValue)
+                        {
                             stackSizeAtEntry[successor.Id] = _stack.Size;
-
+                        }
                         else if (stackSize.Value != _stack.Size /*&& !successorIsHandlerHeader*/)
                         {
                             // Check that the already saved stack size is the same as the current stack size
@@ -148,7 +157,7 @@ namespace tac2cil.Assembler
                     }
                 }
 
-                bytecodeBody.MaxStack = (ushort)_stack.MaxCapacity;
+                bytecodeBody.MaxStack = _stack.MaxCapacity;
                 bytecodeBody.Instructions.AddRange(instructionConverter.Result);
                 //EmptyStackBeforeExit(bytecodeBody, (int)stackSizeAtEntry[cfg.Exit.Id]);
             }
@@ -163,17 +172,17 @@ namespace tac2cil.Assembler
 
             // all return instructions have the same label and offset, therefore they are all equal between them
             // we look for the indexes of their appearences
-            var returnIndexes = methodBody.Instructions.Select((ins,indx) => ins is Bytecode.BasicInstruction basic &&
-                                                                                    basic.Operation.Equals(Bytecode.BasicOperation.Return) 
+            IEnumerable<int> returnIndexes = methodBody.Instructions.Select((ins, indx) => ins is Bytecode.BasicInstruction basic &&
+                                                                                    basic.Operation.Equals(Bytecode.BasicOperation.Return)
                                                                                     ? indx : -1)
                                                                                     .Where(idx => idx >= 0);
 
             // number of pops that we must execute before returning
-            var pops = Enumerable.Repeat(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Pop), sizeAtExit);
+            IEnumerable<Bytecode.BasicInstruction> pops = Enumerable.Repeat(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Pop), sizeAtExit);
 
             for (int i = 0; i < returnIndexes.Count(); i++)
             {
-                foreach (var pop in pops)
+                foreach (Bytecode.BasicInstruction pop in pops)
                 {
                     // ElementAt is updated by the changes in the list!
                     // after an insertion we get the updated index of the next return instruction
@@ -181,13 +190,16 @@ namespace tac2cil.Assembler
                     methodBody.Instructions.Insert(retIdx, pop);
                 }
             }
-        } 
+        }
 
         private void ProcessBasicBlock(MethodBody body, CFGNode node, InstructionConverter translator)
         {
-            if (node.Instructions.Count == 0) return;
+            if (node.Instructions.Count == 0)
+            {
+                return;
+            }
 
-            var firstInstruction = node.Instructions.First();
+            IInstruction firstInstruction = node.Instructions.First();
             //ProcessExceptionHandling(body, firstInstruction);
 
             translator.Visit(node);
@@ -220,7 +232,7 @@ namespace tac2cil.Assembler
 
             private Bytecode.Instruction LoadOperand(IVariable variable)
             {
-                var l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
+                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
                 _stack.Push();
                 return l;
             }
@@ -234,10 +246,11 @@ namespace tac2cil.Assembler
 
             public override void Visit(BinaryInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>();
-
-                instructions.Add(LoadOperand(instruction.LeftOperand));
-                instructions.Add(LoadOperand(instruction.RightOperand));
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>
+                {
+                    LoadOperand(instruction.LeftOperand),
+                    LoadOperand(instruction.RightOperand)
+                };
                 Bytecode.BasicInstruction basic = new Bytecode.BasicInstruction(0, instruction.Operation.ToBasicOperation())
                 {
                     OverflowCheck = instruction.OverflowCheck,
@@ -250,8 +263,10 @@ namespace tac2cil.Assembler
 
             public override void Visit(UnaryInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>();
-                instructions.Add(LoadOperand(instruction.Operand));
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>
+                {
+                    LoadOperand(instruction.Operand)
+                };
                 Bytecode.BasicInstruction basic = new Bytecode.BasicInstruction(0, instruction.Operation.ToUnaryOperation());
                 instructions.Add(basic);
                 instructions.Add(StoreOperand(instruction.Result));
@@ -262,7 +277,7 @@ namespace tac2cil.Assembler
             {
                 if (instruction.Operand is Constant constant)
                 {
-                    var instructions = new List<Bytecode.Instruction>();
+                    List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
 
                     Bytecode.LoadInstruction loadInstruction = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Value, constant);
                     instructions.Add(loadInstruction);
@@ -283,7 +298,7 @@ namespace tac2cil.Assembler
 
             public override void Visit(NopInstruction instruction)
             {
-                Result.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Nop) { Label = instruction.Label});
+                Result.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Nop) { Label = instruction.Label });
             }
 
             public override void Visit(BreakpointInstruction instruction)
@@ -328,14 +343,16 @@ namespace tac2cil.Assembler
             public override void Visit(ReturnInstruction instruction)
             {
                 if (instruction.HasOperand)
+                {
                     throw new NotImplementedException();
+                }
 
-                Result.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Return) { Label = instruction.Label});
+                Result.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Return) { Label = instruction.Label });
             }
 
             public override void Visit(ThrowInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>()
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
                 {
                     LoadOperand(instruction.Operand),
                     new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Throw)
@@ -355,35 +372,35 @@ namespace tac2cil.Assembler
 
             public override void Visit(UnconditionalBranchInstruction instruction)
             {
-            /*public override void Visit(Bytecode.BranchInstruction op)
-            {
-                switch (op.Operation)
+                /*public override void Visit(Bytecode.BranchInstruction op)
                 {
-                    case Bytecode.BranchOperation.False:
-                    case Bytecode.BranchOperation.True:
-                        ProcessUnaryConditionalBranch(op);
-                        break;
+                    switch (op.Operation)
+                    {
+                        case Bytecode.BranchOperation.False:
+                        case Bytecode.BranchOperation.True:
+                            ProcessUnaryConditionalBranch(op);
+                            break;
 
-                    case Bytecode.BranchOperation.Eq:
-                    case Bytecode.BranchOperation.Neq:
-                    case Bytecode.BranchOperation.Lt:
-                    case Bytecode.BranchOperation.Le:
-                    case Bytecode.BranchOperation.Gt:
-                    case Bytecode.BranchOperation.Ge:
-                        ProcessBinaryConditionalBranch(op);
-                        break;
+                        case Bytecode.BranchOperation.Eq:
+                        case Bytecode.BranchOperation.Neq:
+                        case Bytecode.BranchOperation.Lt:
+                        case Bytecode.BranchOperation.Le:
+                        case Bytecode.BranchOperation.Gt:
+                        case Bytecode.BranchOperation.Ge:
+                            ProcessBinaryConditionalBranch(op);
+                            break;
 
-                    case Bytecode.BranchOperation.Branch:
-                        ProcessUnconditionalBranch(op);
-                        break;
+                        case Bytecode.BranchOperation.Branch:
+                            ProcessUnconditionalBranch(op);
+                            break;
 
-                    case Bytecode.BranchOperation.Leave:
-                        ProcessLeave(op);
-                        break;
+                        case Bytecode.BranchOperation.Leave:
+                            ProcessLeave(op);
+                            break;
 
-                    default: throw op.Operation.ToUnknownValueException();
-                }
-            }*/
+                        default: throw op.Operation.ToUnknownValueException();
+                    }
+                }*/
 
                 throw new NotImplementedException();
             }
@@ -402,13 +419,13 @@ namespace tac2cil.Assembler
 
             public override void Visit(SizeofInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>() { new Bytecode.SizeofInstruction(0, instruction.MeasuredType), StoreOperand(instruction.Result)};
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.SizeofInstruction(0, instruction.MeasuredType), StoreOperand(instruction.Result) };
                 AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(LoadTokenInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>() { new Bytecode.LoadTokenInstruction(0, instruction.Token), StoreOperand(instruction.Result)};
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.LoadTokenInstruction(0, instruction.Token), StoreOperand(instruction.Result) };
                 AddWithLabel(instructions, instruction.Label);
             }
 
@@ -431,9 +448,11 @@ namespace tac2cil.Assembler
                 }
 
                 if (instruction.HasResult)
+                {
                     throw new NotImplementedException();
+                }
 
-                var instructions = instruction.Arguments.Select(arg => LoadOperand(arg)).ToList();
+                List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => LoadOperand(arg)).ToList();
                 instructions.Add(new Bytecode.MethodCallInstruction(0, op, instruction.Method));
                 AddWithLabel(instructions, instruction.Label);
             }
@@ -450,7 +469,7 @@ namespace tac2cil.Assembler
 
             public override void Visit(CopyMemoryInstruction instruction)
             {
-                var instructions = new List<Bytecode.Instruction>()
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
                 {
                     LoadOperand(instruction.TargetAddress),
                     LoadOperand(instruction.SourceAddress),

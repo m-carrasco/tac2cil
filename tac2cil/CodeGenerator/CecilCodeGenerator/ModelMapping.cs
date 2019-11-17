@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using AnalysisNet = Model;
 using Cecil = Mono.Cecil;
 namespace CodeGenerator.CecilCodeGenerator
 {
     // the class holds a mapping between analysis-net and cecil code model objects
-    class ModelMapping
+    internal class ModelMapping
     {
         public ModelMapping()
         {
@@ -24,10 +23,12 @@ namespace CodeGenerator.CecilCodeGenerator
 
         public AnalysisNet.Assembly GetAnalysisNetAssembly(AnalysisNet.IAssemblyReference assemblyReference)
         {
-            var assemblyQuery = AssembliesMap.Keys.Where(a => a.MatchReference(assemblyReference));
+            IEnumerable<AnalysisNet.Assembly> assemblyQuery = AssembliesMap.Keys.Where(a => a.MatchReference(assemblyReference));
 
             if (assemblyQuery.Count() > 1)
+            {
                 throw new Exception("at most one assembly should match");
+            }
 
             AnalysisNet.Assembly assembly = assemblyQuery.FirstOrDefault();
 

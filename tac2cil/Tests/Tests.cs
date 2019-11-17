@@ -8,9 +8,9 @@ namespace Tests
     {
         public string GetResourceAsString(string res)
         {
-            var sourceStream = System.Reflection.Assembly.GetAssembly(typeof(Tests)).GetManifestResourceStream(res);
+            Stream sourceStream = System.Reflection.Assembly.GetAssembly(typeof(Tests)).GetManifestResourceStream(res);
             System.IO.StreamReader streamReader = new System.IO.StreamReader(sourceStream);
-            var source = streamReader.ReadToEnd();
+            string source = streamReader.ReadToEnd();
             return source;
         }
 
@@ -159,18 +159,18 @@ namespace Tests
         private void TestReturnValue(string testSeed, object parameters, ProviderType providerType, bool tac)
         {
             char[] s = { '/' };
-            var resourceToTest = testSeed.Split(s);
+            string[] resourceToTest = testSeed.Split(s);
 
             string sourceCodeResource = resourceToTest[0];
             string type = resourceToTest[1];
             string method = resourceToTest[2];
 
-            var source = GetResourceAsString(sourceCodeResource);
+            string source = GetResourceAsString(sourceCodeResource);
             TestHandler testHandler = new TestHandler();
             object[] param = parameters == null ? null : new object[1] { parameters };
 
-            var r = testHandler.Test(source, type, method, param, tac, providerType);
-            var expectedResult = testHandler.RunOriginalCode(source, type, method, param);
+            object r = testHandler.Test(source, type, method, param, tac, providerType);
+            object expectedResult = testHandler.RunOriginalCode(source, type, method, param);
 
             Assert.AreEqual(expectedResult, r);
         }
@@ -189,7 +189,9 @@ namespace Tests
         [ValueSource("TestReturnValueParameters")] object parameters)
         {
             if (IgnoreInMetadataProvider(testSeed))
+            {
                 return;
+            }
 
             TestReturnValue(testSeed, parameters, ProviderType.METADATA, false);
         }
@@ -207,20 +209,22 @@ namespace Tests
         {
             Model.Host host = new Model.Host();
             Model.ILoader provider = new CecilProvider.Loader(host);
-            var buildDir =
+            string buildDir =
                 Path.GetDirectoryName(System.Reflection.Assembly.GetAssembly(typeof(CecilProvider.Loader))
                     .Location);
 
             // create temporary directory where we place generated dlls
-            var tempDir = Utils.GetTemporaryDirectory();
+            string tempDir = Utils.GetTemporaryDirectory();
 
             // sanity check for needed libraries
             // resourceDSALibrary is the library that is going to be processed
             // resourceDSANUnit has test cases for the DSA library
-            var resourceDSALibrary = Path.Combine(buildDir, "Resources/DSA/Library/DSA.dll");
-            var resourceDSANUnit = Path.Combine(buildDir, "Resources/DSA/NUnit/DSANUnitTests.dll");
+            string resourceDSALibrary = Path.Combine(buildDir, "Resources/DSA/Library/DSA.dll");
+            string resourceDSANUnit = Path.Combine(buildDir, "Resources/DSA/NUnit/DSANUnitTests.dll");
             if (!File.Exists(resourceDSALibrary) || !File.Exists((resourceDSANUnit)))
+            {
                 throw new FileNotFoundException();
+            }
 
             // read the DSA library and re compile it using our framework
             provider.LoadAssembly(resourceDSALibrary);
@@ -228,17 +232,17 @@ namespace Tests
             exporter.WriteAssemblies(tempDir);
 
             // copy nunit test library to temp dir
-            var dsaNUnit = Path.Combine(tempDir, "DSANUnitTests.dll");
+            string dsaNUnit = Path.Combine(tempDir, "DSANUnitTests.dll");
             File.Copy(resourceDSANUnit, dsaNUnit);
 
             // execute nunit test suite
-            var autoRun = new NUnitLite.AutoRun(System.Reflection.Assembly.LoadFrom(dsaNUnit));
-            var outputTxt = Path.Combine(tempDir, "output.txt");
-            var outputCmd = "--out=" + outputTxt ;
+            NUnitLite.AutoRun autoRun = new NUnitLite.AutoRun(System.Reflection.Assembly.LoadFrom(dsaNUnit));
+            string outputTxt = Path.Combine(tempDir, "output.txt");
+            string outputCmd = "--out=" + outputTxt;
             autoRun.Execute(new string[1] { outputCmd });
 
             // check results
-            var output = File.ReadAllText(outputTxt);
+            string output = File.ReadAllText(outputTxt);
             Assert.IsTrue(output.Contains("Test Count: 618, Passed: 618"));
         }
 
@@ -259,7 +263,9 @@ namespace Tests
             };
 
             if (ignore.Contains(testSeed))
+            {
                 return true;
+            }
 
             return false;
         }

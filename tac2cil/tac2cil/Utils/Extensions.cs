@@ -43,8 +43,10 @@ namespace tac2cil
 
         public static void AddRange<T>(this IList<T> t, IList<T> x)
         {
-            foreach (var elem in x)
+            foreach (T elem in x)
+            {
                 t.Add(elem);
+            }
         }
     }
 }

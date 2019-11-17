@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 using Cecil = Mono.Cecil;
 
 namespace CecilProvider
@@ -9,8 +7,10 @@ namespace CecilProvider
     {
         public static void AddRange<T>(this ICollection<T> t, IEnumerable<T> x)
         {
-            foreach (var elem in x)
+            foreach (T elem in x)
+            {
                 t.Add(elem);
+            }
         }
 
         // before yielding type def A it yields every nested type in A
@@ -19,13 +19,17 @@ namespace CecilProvider
         {
             ISet<Cecil.TypeDefinition> visited = new HashSet<Cecil.TypeDefinition>();
 
-            foreach (var typeDefinition in module.GetTypes())
+            foreach (Cecil.TypeDefinition typeDefinition in module.GetTypes())
             {
                 if (visited.Contains(typeDefinition))
+                {
                     continue;
+                }
 
-                foreach (var t in DFS(typeDefinition, visited))
+                foreach (Cecil.TypeDefinition t in DFS(typeDefinition, visited))
+                {
                     yield return t;
+                }
             }
         }
 
@@ -36,12 +40,12 @@ namespace CecilProvider
             if (typeDefinition.DeclaringType == null ||
                 visited.Contains(typeDefinition.DeclaringType))
             {
-                var l = new LinkedList<Cecil.TypeDefinition>();
+                LinkedList<Cecil.TypeDefinition> l = new LinkedList<Cecil.TypeDefinition>();
                 l.AddLast(typeDefinition);
                 return l;
             }
 
-            var rec = DFS(typeDefinition.DeclaringType, visited);
+            LinkedList<Cecil.TypeDefinition> rec = DFS(typeDefinition.DeclaringType, visited);
             rec.AddLast(typeDefinition);
 
             return rec;
