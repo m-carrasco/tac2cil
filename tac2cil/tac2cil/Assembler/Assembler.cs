@@ -230,13 +230,13 @@ namespace tac2cil.Assembler
                 _stack = stack;
             }
 
-            private Bytecode.Instruction LoadOperand(IVariable variable)
+            private Bytecode.Instruction Push(IVariable variable)
             {
                 Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
                 _stack.Push();
                 return l;
             }
-            private Bytecode.Instruction StoreOperand(IVariable Result)
+            private Bytecode.Instruction Pop(IVariable Result)
             {
                 throw new NotImplementedException();
                 //var l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
@@ -248,8 +248,8 @@ namespace tac2cil.Assembler
             {
                 List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>
                 {
-                    LoadOperand(instruction.LeftOperand),
-                    LoadOperand(instruction.RightOperand)
+                    Push(instruction.LeftOperand),
+                    Push(instruction.RightOperand)
                 };
                 Bytecode.BasicInstruction basic = new Bytecode.BasicInstruction(0, instruction.Operation.ToBasicOperation())
                 {
@@ -257,7 +257,7 @@ namespace tac2cil.Assembler
                     UnsignedOperands = instruction.UnsignedOperands,
                 };
                 instructions.Add(basic);
-                instructions.Add(StoreOperand(instruction.Result));
+                instructions.Add(Pop(instruction.Result));
                 AddWithLabel(instructions, instruction.Label);
             }
 
@@ -265,11 +265,11 @@ namespace tac2cil.Assembler
             {
                 List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>
                 {
-                    LoadOperand(instruction.Operand)
+                    Push(instruction.Operand)
                 };
                 Bytecode.BasicInstruction basic = new Bytecode.BasicInstruction(0, instruction.Operation.ToUnaryOperation());
                 instructions.Add(basic);
-                instructions.Add(StoreOperand(instruction.Result));
+                instructions.Add(Pop(instruction.Result));
                 AddWithLabel(instructions, instruction.Label);
             }
 
@@ -293,7 +293,40 @@ namespace tac2cil.Assembler
 
             public override void Visit(StoreInstruction instruction)
             {
-                throw new NotImplementedException();
+                var instructions = new List<Bytecode.Instruction>();
+
+                if (instruction.Result is ArrayElementAccess arrayElementAccess)
+                {
+                    instructions.Add(Push(arrayElementAccess.Array));
+                    
+                    foreach (var index in arrayElementAccess.Indices)
+                    {
+                        instructions.Add(Push(index));
+                    }
+
+                    instructions.Add(new Bytecode.StoreArrayElementInstruction(0, (ArrayType)arrayElementAccess.Type));
+                }
+                else if (instruction.Result is StaticFieldAccess staticFieldAccess)
+                {
+                    instructions.Add(Push(instruction.Operand));
+                    instructions.Add(new Bytecode.StoreFieldInstruction(0, staticFieldAccess.Field));
+                }
+                else if (instruction.Result is InstanceFieldAccess instanceFieldAccess)
+                {
+                    instructions.Add(Push(instanceFieldAccess.Instance));
+                    instructions.Add(Push(instruction.Operand));
+                    instructions.Add(new Bytecode.StoreFieldInstruction(0, instanceFieldAccess.Field));
+                }
+                else if (instruction.Result is Dereference dereference)
+                {
+                    instructions.Add(Push(dereference.Reference));
+                    instructions.Add(Push(instruction.Operand));
+                    instructions.Add(new Bytecode.StoreIndirectInstruction(0, dereference.Type));
+                }
+                else
+                    throw new NotImplementedException();
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(NopInstruction instruction)
@@ -354,7 +387,7 @@ namespace tac2cil.Assembler
             {
                 List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
                 {
-                    LoadOperand(instruction.Operand),
+                    Push(instruction.Operand),
                     new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Throw)
                 };
                 AddWithLabel(instructions, instruction.Label);
@@ -402,7 +435,7 @@ namespace tac2cil.Assembler
                     }
                 }*/
 
-                throw new NotImplementedException();
+                    throw new NotImplementedException();
             }
 
             public override void Visit(ConditionalBranchInstruction instruction)
@@ -419,13 +452,13 @@ namespace tac2cil.Assembler
 
             public override void Visit(SizeofInstruction instruction)
             {
-                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.SizeofInstruction(0, instruction.MeasuredType), StoreOperand(instruction.Result) };
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.SizeofInstruction(0, instruction.MeasuredType), Pop(instruction.Result) };
                 AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(LoadTokenInstruction instruction)
             {
-                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.LoadTokenInstruction(0, instruction.Token), StoreOperand(instruction.Result) };
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { new Bytecode.LoadTokenInstruction(0, instruction.Token), Pop(instruction.Result) };
                 AddWithLabel(instructions, instruction.Label);
             }
 
@@ -452,7 +485,7 @@ namespace tac2cil.Assembler
                     throw new NotImplementedException();
                 }
 
-                List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => LoadOperand(arg)).ToList();
+                List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => Push(arg)).ToList();
                 instructions.Add(new Bytecode.MethodCallInstruction(0, op, instruction.Method));
                 AddWithLabel(instructions, instruction.Label);
             }
@@ -471,9 +504,9 @@ namespace tac2cil.Assembler
             {
                 List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
                 {
-                    LoadOperand(instruction.TargetAddress),
-                    LoadOperand(instruction.SourceAddress),
-                    LoadOperand(instruction.NumberOfBytes),
+                    Push(instruction.TargetAddress),
+                    Push(instruction.SourceAddress),
+                    Push(instruction.NumberOfBytes),
                     new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.CopyBlock),
                 };
 
