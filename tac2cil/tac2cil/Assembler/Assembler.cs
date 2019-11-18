@@ -230,9 +230,14 @@ namespace tac2cil.Assembler
                 _stack = stack;
             }
 
-            private Bytecode.Instruction Push(IVariable variable)
+            private Bytecode.Instruction Push(Constant constant)
             {
-                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
+                throw new NotImplementedException();
+            }
+
+            private Bytecode.Instruction Push(IVariable variable, bool isAddress = false)
+            {
+                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, isAddress ? Bytecode.LoadOperation.Address : Bytecode.LoadOperation.Content, variable);
                 _stack.Push();
                 return l;
             }
@@ -272,23 +277,126 @@ namespace tac2cil.Assembler
                 instructions.Add(Pop(instruction.Result));
                 AddWithLabel(instructions, instruction.Label);
             }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Constant constant)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(constant));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, IVariable variable, bool isReference)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(variable, isReference));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, ArrayLengthAccess arrayLengthAccess)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(arrayLengthAccess.Instance));
+                instructions.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.LoadArrayLength));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Bytecode.LoadArrayElementOperation op, ArrayElementAccess arrayElementAccess)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(arrayElementAccess.Array));
+                foreach (var index in arrayElementAccess.Indices)
+                    instructions.Add(Push(index));
+                instructions.Add(new Bytecode.LoadArrayElementInstruction(0, op, new ArrayType(arrayElementAccess.Type)));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Bytecode.LoadFieldOperation op, StaticFieldAccess staticFieldAccess)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(new Bytecode.LoadFieldInstruction(0, op, staticFieldAccess.Field));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Bytecode.LoadFieldOperation op, InstanceFieldAccess instanceFieldAccess)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(instanceFieldAccess.Instance));
+                instructions.Add(new Bytecode.LoadFieldInstruction(0, op, instanceFieldAccess.Field));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, VirtualMethodReference virtualMethodRef)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(virtualMethodRef.Instance));
+                instructions.Add(new Bytecode.LoadMethodAddressInstruction(0, Bytecode.LoadMethodAddressOperation.Virtual, virtualMethodRef.Method));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, StaticMethodReference staticMethodRef)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(new Bytecode.LoadMethodAddressInstruction(0, Bytecode.LoadMethodAddressOperation.Static, staticMethodRef.Method));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
+
+            public IList<Bytecode.Instruction> ProcessLoad(IValue operand, IVariable result, bool isReference)
+            {
+                IList<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
+                if (operand is Constant constant)
+                {
+                    instructions = ProcessLoad(result, constant);
+                } else if (operand is IVariable variable)
+                {
+                    instructions = ProcessLoad(result, variable, isReference);
+                }
+                else if (operand is ArrayLengthAccess arrayLengthAccess)
+                {
+                    instructions = ProcessLoad(result, arrayLengthAccess);
+                }
+                else if (operand is ArrayElementAccess arrayElementAccess)
+                {
+                    var op = !isReference ? Bytecode.LoadArrayElementOperation.Content : Bytecode.LoadArrayElementOperation.Address;
+                    instructions = ProcessLoad(result, op, arrayElementAccess);
+                }
+                else if (operand is Reference reference)
+                {
+                    // can we have a reference of a reference?
+                    throw new NotImplementedException();
+                }
+                else if (operand is StaticFieldAccess staticFieldAccess)
+                {
+                    var op = !isReference ? Bytecode.LoadFieldOperation.Content : Bytecode.LoadFieldOperation.Address;
+                    instructions = ProcessLoad(result, op, staticFieldAccess);
+                }
+                else if (operand is InstanceFieldAccess instanceFieldAccess)
+                {
+                    var op = !isReference ? Bytecode.LoadFieldOperation.Content : Bytecode.LoadFieldOperation.Address;
+                    instructions = ProcessLoad(result, op, instanceFieldAccess);
+                }
+                else if (operand is Dereference dereference)
+                {
+                    throw new NotImplementedException();
+                }
+                else if (operand is StaticMethodReference staticMethodRef)
+                {
+                    instructions = ProcessLoad(result, staticMethodRef);
+                }
+                else if (operand is VirtualMethodReference virtualMethodRef)
+                {
+                    instructions = ProcessLoad(result, virtualMethodRef);
+                }
+                else
+                    throw new NotImplementedException();
+
+                return instructions;
+            }
 
             public override void Visit(LoadInstruction instruction)
             {
-                if (instruction.Operand is Constant constant)
-                {
-                    List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
-
-                    Bytecode.LoadInstruction loadInstruction = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Value, constant);
-                    instructions.Add(loadInstruction);
-
-                    Bytecode.StoreInstruction storeInstruction = new Bytecode.StoreInstruction(0, instruction.Result);
-                    instructions.Add(storeInstruction);
-
-                    AddWithLabel(instructions, instruction.Label);
-                }
-
-                throw new NotImplementedException();
+                IList<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
+                instructions = ProcessLoad(instruction.Operand, instruction.Result, instruction.Operand is Reference);
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(StoreInstruction instruction)
