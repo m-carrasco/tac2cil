@@ -339,10 +339,17 @@ namespace tac2cil.Assembler
                 instructions.Add(Pop(result));
                 return instructions;
             }
-
+            public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Dereference dereference)
+            {
+                var instructions = new List<Bytecode.Instruction>();
+                instructions.Add(Push(dereference.Reference, true));
+                instructions.Add(new Bytecode.LoadIndirectInstruction(0, dereference.Type));
+                instructions.Add(Pop(result));
+                return instructions;
+            }
             public IList<Bytecode.Instruction> ProcessLoad(IValue operand, IVariable result, bool isReference)
             {
-                IList<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
+                IList<Bytecode.Instruction> instructions;
                 if (operand is Constant constant)
                 {
                     instructions = ProcessLoad(result, constant);
@@ -376,7 +383,7 @@ namespace tac2cil.Assembler
                 }
                 else if (operand is Dereference dereference)
                 {
-                    throw new NotImplementedException();
+                    instructions = ProcessLoad(result, dereference);
                 }
                 else if (operand is StaticMethodReference staticMethodRef)
                 {
