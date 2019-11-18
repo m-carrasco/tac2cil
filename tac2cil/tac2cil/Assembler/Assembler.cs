@@ -485,17 +485,27 @@ namespace tac2cil.Assembler
 
             public override void Visit(ConvertInstruction instruction)
             {
-                throw new NotImplementedException();
+                var instructions = new List<Bytecode.Instruction>();
+
+                var operation = instruction.Operation.ToConvertOperation();
+                instructions.Add(Push(instruction.Operand));
+                instructions.Add(new Bytecode.ConvertInstruction(0, operation, instruction.ConversionType));
+                instructions.Add(Pop(instruction.Result));
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(ReturnInstruction instruction)
             {
+                var instructions = new List<Bytecode.Instruction>();
+
                 if (instruction.HasOperand)
                 {
-                    throw new NotImplementedException();
+                    instructions.Add(Push(instruction.Operand));
                 }
 
-                Result.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Return) { Label = instruction.Label });
+                instructions.Add(new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.Return));
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(ThrowInstruction instruction)
@@ -630,27 +640,64 @@ namespace tac2cil.Assembler
 
             public override void Visit(LocalAllocationInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
+                {
+                    Push(instruction.NumberOfBytes),
+                    new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.LocalAllocation),
+                };
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(InitializeMemoryInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
+                {
+                    Push(instruction.TargetAddress, true),
+                    Push(instruction.Value),
+                    Push(instruction.NumberOfBytes),
+                    new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.InitBlock),
+                };
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(InitializeObjectInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
+                {
+                    Push(instruction.TargetAddress, true),
+                    // not sure if TargetAddress returns ptr<type> or type
+                    new Bytecode.InitObjInstruction(0, instruction.TargetAddress.Type),
+                };
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(CopyObjectInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
+                {
+                    Push(instruction.TargetAddress, true),
+                    Push(instruction.SourceAddress, true),
+
+                    // not sure if TargetAddress returns ptr<type> or type
+                    new Bytecode.BasicInstruction(0, Bytecode.BasicOperation.CopyObject),
+                };
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(CreateArrayInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>();
+                foreach (var lb in instruction.LowerBounds)
+                    instructions.Add(Push(lb));
+                foreach (var s in instruction.Sizes)
+                    instructions.Add(Push(s));
+                // im assuming the result is an array
+                instructions.Add(new Bytecode.CreateArrayInstruction(0, (ArrayType)instruction.Result.Type));
+                instructions.Add(Pop(instruction.Result));
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(PhiInstruction instruction)

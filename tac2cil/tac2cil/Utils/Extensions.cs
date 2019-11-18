@@ -40,6 +40,19 @@ namespace tac2cil
             }
         }
 
+        public static Bytecode.ConvertOperation ToConvertOperation(this TacInstructions.ConvertOperation operation)
+        {
+            switch (operation)
+            {
+                case TacInstructions.ConvertOperation.Box: return Bytecode.ConvertOperation.Box;
+                case TacInstructions.ConvertOperation.Cast: return Bytecode.ConvertOperation.Cast;
+                case TacInstructions.ConvertOperation.Conv: return Bytecode.ConvertOperation.Conv;
+                case TacInstructions.ConvertOperation.Unbox: return Bytecode.ConvertOperation.Unbox;
+                case TacInstructions.ConvertOperation.UnboxPtr: return Bytecode.ConvertOperation.UnboxPtr;
+
+                default: throw new NotImplementedException();
+            }
+        }
 
         public static void AddRange<T>(this IList<T> t, IList<T> x)
         {
