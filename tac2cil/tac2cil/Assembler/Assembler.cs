@@ -530,49 +530,44 @@ namespace tac2cil.Assembler
 
             public override void Visit(UnconditionalBranchInstruction instruction)
             {
-                /*public override void Visit(Bytecode.BranchInstruction op)
-                {
-                    switch (op.Operation)
-                    {
-                        case Bytecode.BranchOperation.False:
-                        case Bytecode.BranchOperation.True:
-                            ProcessUnaryConditionalBranch(op);
-                            break;
-
-                        case Bytecode.BranchOperation.Eq:
-                        case Bytecode.BranchOperation.Neq:
-                        case Bytecode.BranchOperation.Lt:
-                        case Bytecode.BranchOperation.Le:
-                        case Bytecode.BranchOperation.Gt:
-                        case Bytecode.BranchOperation.Ge:
-                            ProcessBinaryConditionalBranch(op);
-                            break;
-
-                        case Bytecode.BranchOperation.Branch:
-                            ProcessUnconditionalBranch(op);
-                            break;
-
-                        case Bytecode.BranchOperation.Leave:
-                            ProcessLeave(op);
-                            break;
-
-                        default: throw op.Operation.ToUnknownValueException();
-                    }
-                }*/
-
-                    throw new NotImplementedException();
+                var br = new Bytecode.BranchInstruction(0, Bytecode.BranchOperation.Branch, 0);
+                br.Target = instruction.Target;
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { br };
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(ConditionalBranchInstruction instruction)
             {
-                throw new NotImplementedException();
+                var left = Push(instruction.LeftOperand);
+                Bytecode.Instruction right = null;
+                if (instruction.RightOperand is Constant rightConstant)
+                {
+                    right = Push(rightConstant);
+                }
+                else if (instruction.RightOperand is IVariable rightVariable)
+                {
+                    right = Push(rightVariable);
+                }
+                else if (instruction.RightOperand is UnknownValue)
+                    throw new NotImplementedException();
+                    
+
+                var br = new Bytecode.BranchInstruction(0, instruction.Operation.ToBranchOperation(), 0);
+                br.Target = instruction.Target;
+                br.UnsignedOperands = instruction.UnsignedOperands;
+
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { left, right, br };
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(SwitchInstruction instruction)
             {
-                //LoadOperand(instruction.Operand);
-                //new Bytecode.SwitchInstruction(0, instruction.Targets);
-                throw new NotImplementedException();
+                var op = Push(instruction.Operand);
+                var sw = new Bytecode.SwitchInstruction(0, new uint[0]);
+                sw.Targets.AddRange(instruction.Targets);
+
+                List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>() { op, sw };
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(SizeofInstruction instruction)
@@ -605,19 +600,26 @@ namespace tac2cil.Assembler
                         throw new NotImplementedException();
                 }
 
-                if (instruction.HasResult)
-                {
-                    throw new NotImplementedException();
-                }
-
                 List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => Push(arg)).ToList();
                 instructions.Add(new Bytecode.MethodCallInstruction(0, op, instruction.Method));
+
+                if (instruction.HasResult)
+                    instructions.Add(Pop(instruction.Result));
+
                 AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(IndirectMethodCallInstruction instruction)
             {
-                throw new NotImplementedException();
+                List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => Push(arg)).ToList();
+                instructions.Add(Push(instruction.Pointer));
+
+                instructions.Add(new Bytecode.IndirectMethodCallInstruction(0, (FunctionPointerType)instruction.Pointer.Type));
+
+                if (instruction.HasResult)
+                    instructions.Add(Pop(instruction.Result));
+
+                AddWithLabel(instructions, instruction.Label);
             }
 
             public override void Visit(CreateObjectInstruction instruction)

@@ -54,6 +54,21 @@ namespace tac2cil
             }
         }
 
+        public static Bytecode.BranchOperation ToBranchOperation(this TacInstructions.BranchOperation operation)
+        {
+            switch (operation)
+            {
+                case TacInstructions.BranchOperation.Eq: return Bytecode.BranchOperation.Eq;
+                case TacInstructions.BranchOperation.Ge: return Bytecode.BranchOperation.Ge;
+                case TacInstructions.BranchOperation.Gt: return Bytecode.BranchOperation.Gt;
+                case TacInstructions.BranchOperation.Le: return Bytecode.BranchOperation.Le;
+                case TacInstructions.BranchOperation.Lt: return Bytecode.BranchOperation.Lt;
+                case TacInstructions.BranchOperation.Neq: return Bytecode.BranchOperation.Neq;
+                default: throw new NotImplementedException();
+            }
+            
+        }
+
         public static void AddRange<T>(this IList<T> t, IList<T> x)
         {
             foreach (T elem in x)
