@@ -213,12 +213,58 @@ namespace tac2cil.Assembler
 
         private class InstructionConverter : InstructionVisitor
         {
+            public override void Visit(IInstructionContainer container)
+            {
+                for (int i=0; i < container.Instructions.Count;)
+                {
+                    Instruction current = container.Instructions[i] as Instruction;
+
+                    // hacky?
+                    // create FakeObjectCreationInstruction
+                    // this is a workaround because analysis-net splits 
+                    // Bytecode.CreatObjectInstruction into multiple instructions
+                    // we need information from these three instructions to create again a
+                    // Bytecode.CreatObjectInstruction
+                    if (i + 2 < container.Instructions.Count &&
+                        current is CreateObjectInstruction createObjectInstruction &&
+                        container.Instructions[i + 1] is MethodCallInstruction callInstruction &&
+                        container.Instructions[i + 2] is LoadInstruction loadInstruction &&
+                        loadInstruction.Operand == createObjectInstruction.Result)
+                    {
+                        current = new FakeCreateObjectInstruction()
+                        {
+                            CreateObjectInstruction = createObjectInstruction,
+                            MethodCallInstruction = callInstruction,
+                            LoadInstruction = loadInstruction
+                        };
+
+                        // do not process twice
+                        // the same instructions
+                        i += 3;
+                    }
+                    else
+                        i += 1;
+
+                    current.Accept(this);
+                }
+            }
+            public class FakeCreateObjectInstruction : Instruction
+            {
+                public FakeCreateObjectInstruction() : base(0) {}
+
+                public CreateObjectInstruction CreateObjectInstruction;
+                public MethodCallInstruction MethodCallInstruction;
+                public LoadInstruction LoadInstruction;
+
+                public virtual void Accept(InstructionConverter visitor)
+                {
+                    visitor.Visit(this);
+                }
+            }
+
             public IList<Bytecode.Instruction> Result { get; private set; }
                 = new List<Bytecode.Instruction>();
-
             private readonly OperandStack _stack;
-
-
             private void AddWithLabel(IEnumerable<Bytecode.Instruction> instructions, string label)
             {
                 instructions.First().Label = label;
@@ -232,21 +278,31 @@ namespace tac2cil.Assembler
 
             private Bytecode.Instruction Push(Constant constant)
             {
-                throw new NotImplementedException();
+                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Value, constant);
+                return l;
             }
 
             private Bytecode.Instruction Push(IVariable variable, bool isAddress = false)
             {
-                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, isAddress ? Bytecode.LoadOperation.Address : Bytecode.LoadOperation.Content, variable);
                 _stack.Push();
+                Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, isAddress ? Bytecode.LoadOperation.Address : Bytecode.LoadOperation.Content, variable);
                 return l;
             }
             private Bytecode.Instruction Pop(IVariable Result)
             {
-                throw new NotImplementedException();
-                //var l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Content, variable);
-                //_stack.Push();
-                //return l;
+                _stack.Pop();
+                Bytecode.StoreInstruction s = new Bytecode.StoreInstruction(0, Result);
+                return s;
+            }
+
+            public void Visit(FakeCreateObjectInstruction instruction)
+            {
+                // skip this
+                var args = instruction.MethodCallInstruction.Arguments.Skip(1);
+                var instructions = args.Select(arg => Push(arg)).ToList();
+                instructions.Add(new Bytecode.CreateObjectInstruction(0, instruction.MethodCallInstruction.Method));
+                instructions.Add(Pop(instruction.LoadInstruction.Result));
+                AddWithLabel(instructions, instruction.CreateObjectInstruction.Label);
             }
 
             public override void Visit(BinaryInstruction instruction)
@@ -624,7 +680,8 @@ namespace tac2cil.Assembler
 
             public override void Visit(CreateObjectInstruction instruction)
             {
-                throw new NotImplementedException();
+                // this is done in Visit(FakeCreateObjectInstruction)
+                throw new NotSupportedException();
             }
 
             public override void Visit(CopyMemoryInstruction instruction)
