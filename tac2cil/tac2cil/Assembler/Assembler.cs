@@ -227,15 +227,15 @@ namespace tac2cil.Assembler
                     // Bytecode.CreatObjectInstruction
                     if (i + 2 < container.Instructions.Count &&
                         current is CreateObjectInstruction createObjectInstruction &&
-                        container.Instructions[i + 1] is MethodCallInstruction callInstruction &&
+                        container.Instructions[i + 1] is MethodCallInstruction callInstruction /*&&
                         container.Instructions[i + 2] is LoadInstruction loadInstruction &&
-                        loadInstruction.Operand == createObjectInstruction.Result)
+                        loadInstruction.Operand == createObjectInstruction.Result*/)
                     {
                         current = new FakeCreateObjectInstruction()
                         {
                             CreateObjectInstruction = createObjectInstruction,
                             MethodCallInstruction = callInstruction,
-                            LoadInstruction = loadInstruction
+                            //LoadInstruction = loadInstruction
                         };
 
                         // do not process twice
@@ -278,6 +278,7 @@ namespace tac2cil.Assembler
 
             private Bytecode.Instruction Push(Constant constant)
             {
+                _stack.Push();
                 Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Value, constant);
                 return l;
             }

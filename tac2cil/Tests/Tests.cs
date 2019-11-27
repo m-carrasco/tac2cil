@@ -197,12 +197,20 @@ namespace Tests
         }
 
         [Test, Sequential]
-        public void TestCecilProvider(
+        public void TestCecilProviderSil(
         [ValueSource("TestReturnValueSeeds")] string testSeed,
         [ValueSource("TestReturnValueParameters")] object parameters)
         {
             TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
         }
+        [Test, Sequential, Ignore("")]
+        public void TestCecilProviderTac(
+        [ValueSource("TestReturnValueSeeds")] string testSeed,
+        [ValueSource("TestReturnValueParameters")] object parameters)
+        {
+            TestReturnValue(testSeed, parameters, ProviderType.CECIL, true);
+        }
+
 
         [Test]
         public void TestCompileDSAWithCecilProvider()
