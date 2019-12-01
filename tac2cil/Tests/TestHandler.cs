@@ -60,6 +60,7 @@ namespace Tests
             string output = compiler.CompileSource(source);
 
             Host host = new Host();
+            PlatformTypes.Resolve(host);
             ILoader provider = CreateProvider(providerType, host);
 
             provider.LoadAssembly(output);
