@@ -280,7 +280,7 @@ namespace tac2cil.Assembler
                 instructions.Add(Push(arrayElementAccess.Array));
                 foreach (var index in arrayElementAccess.Indices)
                     instructions.Add(Push(index));
-                instructions.Add(new Bytecode.LoadArrayElementInstruction(0, op, new ArrayType(arrayElementAccess.Type)));
+                instructions.Add(new Bytecode.LoadArrayElementInstruction(0, op, (ArrayType)arrayElementAccess.Array.Type));
                 instructions.Add(Pop(result));
                 return instructions;
             }
@@ -387,13 +387,13 @@ namespace tac2cil.Assembler
                 if (instruction.Result is ArrayElementAccess arrayElementAccess)
                 {
                     instructions.Add(Push(arrayElementAccess.Array));
-                    
                     foreach (var index in arrayElementAccess.Indices)
                     {
                         instructions.Add(Push(index));
                     }
-
-                    instructions.Add(new Bytecode.StoreArrayElementInstruction(0, (ArrayType)arrayElementAccess.Type));
+                    instructions.Add(Push(instruction.Operand));
+                    
+                    instructions.Add(new Bytecode.StoreArrayElementInstruction(0, (ArrayType)arrayElementAccess.Array.Type));
                 }
                 else if (instruction.Result is StaticFieldAccess staticFieldAccess)
                 {
