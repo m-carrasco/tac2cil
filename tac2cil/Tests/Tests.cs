@@ -91,6 +91,9 @@ namespace Tests
             "Tests.Resources.InOutParameters2.cs/Test.Program/Test3", // 57
 
             "Tests.Resources.Arrays2.cs/Test.Program/Test", // 58
+
+            "Tests.Resources.IfConditionals2.cs/Test.Program/Test", // 59
+            "Tests.Resources.Loop2.cs/Test.Program/Test", // 60
         };
 
         private static readonly object[] TestReturnValueParameters =
@@ -154,6 +157,8 @@ namespace Tests
             null,  // 56
             null,  // 57
             null,  // 58
+            5,     // 59
+            5,     // 60
         };
 
         private void TestReturnValue(string testSeed, object parameters, ProviderType providerType, bool tac)

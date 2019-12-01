@@ -18,7 +18,7 @@ namespace CodeGenerator.CecilCodeGenerator
         public Model.Bytecode.Instruction GetTarget(string target)
         {
             uint offset = ParseTarget(target);
-            return translated.Where(kv => kv.Offset == offset).Single();
+            return translated.Where(kv => ParseTarget(kv.Label) == offset).Single();
         }
 
         private uint ParseTarget(string target)
@@ -259,47 +259,47 @@ namespace CodeGenerator.CecilCodeGenerator
         public override void Visit(Model.Bytecode.LoadIndirectInstruction instruction)
         {
             Mono.Cecil.Cil.OpCode opcode;
-            if (instruction.Type == Model.Types.PlatformTypes.Float64)
+            if (instruction.Type.Equals(Model.Types.PlatformTypes.Float64))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_R8;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Float32)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Float32))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_R4;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int64)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int64))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_I8;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int32)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int32))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_I4;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int16)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int16))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_I2;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int8)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int8))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_I1;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.IntPtr)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.IntPtr))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_I;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.UInt32)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.UInt32))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_U4;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.UInt16)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.UInt16))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_U2;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.UInt8)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.UInt8))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_U1;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Object)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Object))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Ldind_Ref;
             }
@@ -330,31 +330,31 @@ namespace CodeGenerator.CecilCodeGenerator
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_R8;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Float32)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Float32))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_R4;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int64)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int64))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_I8;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int32)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int32))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_I4;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int16)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int16))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_I2;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Int8)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Int8))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_I1;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.IntPtr)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.IntPtr))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_I;
             }
-            else if (instruction.Type == Model.Types.PlatformTypes.Object)
+            else if (instruction.Type.Equals(Model.Types.PlatformTypes.Object))
             {
                 opcode = Mono.Cecil.Cil.OpCodes.Stind_Ref;
             }
@@ -948,35 +948,35 @@ namespace CodeGenerator.CecilCodeGenerator
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Call, arrayGet);
 
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.IntPtr)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.IntPtr))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int8)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Int8))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I1);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int16)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Int16))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I2);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int32)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Int32))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I4);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Int64)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Int64))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_I8);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float32)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Float32))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R4);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Float64))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R8);
                 }
-                else if (instruction.Array.ElementsType == Model.Types.PlatformTypes.Float64)
+                else if (instruction.Array.ElementsType.Equals(Model.Types.PlatformTypes.Float64))
                 {
                     res = processor.Create(Mono.Cecil.Cil.OpCodes.Ldelem_R8);
                 }

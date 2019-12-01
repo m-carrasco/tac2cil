@@ -15,91 +15,12 @@ namespace tac2cil.Assembler
 {
     public class Assembler
     {
-        #region class OperandStack
-        private class OperandStack
-        {
-            private readonly Stack<bool> _s;
-
-            public OperandStack()
-            {
-                MaxCapacity = 0;
-                _s = new Stack<bool>();
-            }
-
-            public IEnumerable<bool> Variables => _s;
-
-            public ushort MaxCapacity { get; private set; }
-
-            public ushort Size
-            {
-                get => (ushort)_s.Count;
-                set
-                {
-                    if (value < 0)
-                    {
-                        throw new InvalidOperationException();
-                    }
-
-                    if (value >= _s.Count)
-                    {
-                        for (int i = 0; i > (value - _s.Count); i++)
-                        {
-                            _s.Push(true);
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 0; i > (_s.Count - value); i++)
-                        {
-                            _s.Pop();
-                        }
-                    }
-                }
-            }
-
-            //public void Clear()
-            //{
-            //    top = 0;
-            //}
-
-            //public void IncrementCapacity()
-            //{
-            //    if (capacity >= stack.Length) throw new InvalidOperationException();
-            //    capacity++;
-            //}
-
-            //public void DecrementCapacity()
-            //{
-            //    if (capacity <= stack.Length - 1) throw new InvalidOperationException();
-            //    capacity--;
-            //}
-
-            public void Push()
-            {
-                if (_s.Count >= MaxCapacity)
-                {
-                    MaxCapacity++;
-                }
-
-                _s.Push(true);
-            }
-
-            public void Pop()
-            {
-                _s.Pop();
-            }
-        }
-
-        #endregion
-
         private readonly MethodBody _tacBody;
-        private readonly OperandStack _stack;
 
         public Assembler(MethodBody b)
         {
             Contract.Assert(b.Kind == MethodBodyKind.ThreeAddressCode);
             _tacBody = b;
-            _stack = new OperandStack();
         }
 
         public MethodBody Execute()
@@ -113,53 +34,16 @@ namespace tac2cil.Assembler
 
             if (_tacBody.Instructions.Count > 0)
             {
-                InstructionConverter instructionConverter = new InstructionConverter(_stack);
+                InstructionConverter instructionConverter = new InstructionConverter();
                 ControlFlowAnalysis cfanalysis = new ControlFlowAnalysis(_tacBody);
                 // exceptions disabled for now
                 ControlFlowGraph cfg = cfanalysis.GenerateNormalControlFlow();
-                ushort?[] stackSizeAtEntry = new ushort?[cfg.Nodes.Count];
-                CFGNode[] sorted_nodes = cfg.ForwardOrder;
 
                 //FillExceptionHandlersStart();
-                foreach (CFGNode node in sorted_nodes)
-                {
-                    ushort? stackSize = stackSizeAtEntry[node.Id];
-
-                    if (!stackSize.HasValue)
-                    {
-                        stackSizeAtEntry[node.Id] = 0;
-                    }
-
-                    _stack.Size = stackSizeAtEntry[node.Id].Value;
+                foreach (CFGNode node in cfg.ForwardOrder)
                     ProcessBasicBlock(bytecodeBody, node, instructionConverter);
 
-                    foreach (CFGNode successor in node.Successors)
-                    {
-                        // exceptions disabled for now
-                        //var successorIsHandlerHeader = false;
-                        //if (successor.Instructions.Count > 0)
-                        //{
-                        //var firstInstruction = successor.Instructions.First();
-                        //successorIsHandlerHeader = exceptionHandlersStart.ContainsKey(firstInstruction.Label);
-                        //}
-
-                        stackSize = stackSizeAtEntry[successor.Id];
-
-                        if (!stackSize.HasValue)
-                        {
-                            stackSizeAtEntry[successor.Id] = _stack.Size;
-                        }
-                        else if (stackSize.Value != _stack.Size /*&& !successorIsHandlerHeader*/)
-                        {
-                            // Check that the already saved stack size is the same as the current stack size
-                            throw new Exception("Basic block with different stack size at entry!");
-                        }
-                    }
-                }
-
-                bytecodeBody.MaxStack = _stack.MaxCapacity;
                 bytecodeBody.Instructions.AddRange(instructionConverter.Result);
-                //EmptyStackBeforeExit(bytecodeBody, (int)stackSizeAtEntry[cfg.Exit.Id]);
             }
 
             return bytecodeBody;
@@ -213,6 +97,36 @@ namespace tac2cil.Assembler
 
         private class InstructionConverter : InstructionVisitor
         {
+            // A basic block can end with a non-branch instruction or a conditional branch instruction.
+            // In those cases there is an implict flow, it is not encoded in any instruction.
+            // That forces us to translate the nodes in a very specific order or translate each instruction linearly.
+            // The implicit flow expects a particular instruction after another one.
+            // In order to avoid that situation we make the control flow explicit.
+            // If a basic block terminates with a non branch instruction, 
+            // we generate a unconditional branch to the original fall through target.
+            // If a basic block terminates with a conditional branch, we create an unconditional branch to the implicit target.
+            private void TranslateImplicitFlow(IInstructionContainer container)
+            {
+                CFGNode n = container as CFGNode;
+
+                var last = n.Instructions.Last();
+                if (Model.Extensions.CanFallThroughNextInstruction(last))
+                {
+                    UnconditionalBranchInstruction explicitBr;
+                    if (last is ConditionalBranchInstruction conditionalBranch)
+                    {
+                        var successor = n.Successors.Where(s => s.Instructions.First().Label != conditionalBranch.Target).Single();
+                        explicitBr = new UnconditionalBranchInstruction(0, successor.Instructions.First().Label);
+                    }
+                    else
+                    {
+                        var successor = n.Successors.Single();
+                        explicitBr = new UnconditionalBranchInstruction(0, successor.Instructions.First().Label);
+                    }
+
+                    explicitBr.Accept(this);
+                }
+            }
             public override void Visit(IInstructionContainer container)
             {
                 for (int i=0; i < container.Instructions.Count;)
@@ -227,26 +141,25 @@ namespace tac2cil.Assembler
                     // Bytecode.CreatObjectInstruction
                     if (i + 2 < container.Instructions.Count &&
                         current is CreateObjectInstruction createObjectInstruction &&
-                        container.Instructions[i + 1] is MethodCallInstruction callInstruction /*&&
-                        container.Instructions[i + 2] is LoadInstruction loadInstruction &&
-                        loadInstruction.Operand == createObjectInstruction.Result*/)
+                        container.Instructions[i + 1] is MethodCallInstruction callInstruction)
                     {
                         current = new FakeCreateObjectInstruction()
                         {
                             CreateObjectInstruction = createObjectInstruction,
                             MethodCallInstruction = callInstruction,
-                            //LoadInstruction = loadInstruction
                         };
 
                         // do not process twice
                         // the same instructions
-                        i += 3;
+                        i += 2;
                     }
                     else
                         i += 1;
 
                     current.Accept(this);
                 }
+
+                TranslateImplicitFlow(container);
             }
             public class FakeCreateObjectInstruction : Instruction
             {
@@ -254,55 +167,60 @@ namespace tac2cil.Assembler
 
                 public CreateObjectInstruction CreateObjectInstruction;
                 public MethodCallInstruction MethodCallInstruction;
-                public LoadInstruction LoadInstruction;
 
-                public virtual void Accept(InstructionConverter visitor)
+                public override void Accept(IInstructionVisitor visitor)
                 {
-                    visitor.Visit(this);
+                    var converter = visitor as InstructionConverter;
+                    base.Accept(converter);
+                    converter.Visit(this);
                 }
             }
 
             public IList<Bytecode.Instruction> Result { get; private set; }
                 = new List<Bytecode.Instruction>();
-            private readonly OperandStack _stack;
+            //private readonly OperandStack _stack;
             private void AddWithLabel(IEnumerable<Bytecode.Instruction> instructions, string label)
             {
                 instructions.First().Label = label;
                 Result.AddRange(instructions);
             }
 
-            public InstructionConverter(OperandStack stack)
+            public InstructionConverter()
             {
-                _stack = stack;
+                //_stack = stack;
             }
 
             private Bytecode.Instruction Push(Constant constant)
             {
-                _stack.Push();
+                // in bytecode there is no bool type
+                if (constant.Value is Boolean b)
+                    constant = new Constant(b == true ? 1 : 0);
+
+                //_stack.Push();
                 Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, Bytecode.LoadOperation.Value, constant);
                 return l;
             }
 
             private Bytecode.Instruction Push(IVariable variable, bool isAddress = false)
             {
-                _stack.Push();
+                //_stack.Push();
                 Bytecode.LoadInstruction l = new Bytecode.LoadInstruction(0, isAddress ? Bytecode.LoadOperation.Address : Bytecode.LoadOperation.Content, variable);
                 return l;
             }
             private Bytecode.Instruction Pop(IVariable Result)
             {
-                _stack.Pop();
+                //_stack.Pop();
                 Bytecode.StoreInstruction s = new Bytecode.StoreInstruction(0, Result);
                 return s;
             }
 
             public void Visit(FakeCreateObjectInstruction instruction)
             {
-                // skip this
+                // skip 'this'
                 var args = instruction.MethodCallInstruction.Arguments.Skip(1);
                 var instructions = args.Select(arg => Push(arg)).ToList();
                 instructions.Add(new Bytecode.CreateObjectInstruction(0, instruction.MethodCallInstruction.Method));
-                instructions.Add(Pop(instruction.LoadInstruction.Result));
+                instructions.Add(Pop(instruction.CreateObjectInstruction.Result));
                 AddWithLabel(instructions, instruction.CreateObjectInstruction.Label);
             }
 
@@ -399,7 +317,7 @@ namespace tac2cil.Assembler
             public IList<Bytecode.Instruction> ProcessLoad(IVariable result, Dereference dereference)
             {
                 var instructions = new List<Bytecode.Instruction>();
-                instructions.Add(Push(dereference.Reference, true));
+                instructions.Add(Push(dereference.Reference, false));
                 instructions.Add(new Bytecode.LoadIndirectInstruction(0, dereference.Type));
                 instructions.Add(Pop(result));
                 return instructions;
@@ -425,8 +343,7 @@ namespace tac2cil.Assembler
                 }
                 else if (operand is Reference reference)
                 {
-                    // can we have a reference of a reference?
-                    throw new NotImplementedException();
+                    instructions = ProcessLoad(reference.Value, result, true);
                 }
                 else if (operand is StaticFieldAccess staticFieldAccess)
                 {
@@ -493,7 +410,9 @@ namespace tac2cil.Assembler
                 {
                     instructions.Add(Push(dereference.Reference));
                     instructions.Add(Push(instruction.Operand));
-                    instructions.Add(new Bytecode.StoreIndirectInstruction(0, dereference.Type));
+                    var type = dereference.Type.Equals(PlatformTypes.Boolean) ? PlatformTypes.SByte : dereference.Type;
+
+                    instructions.Add(new Bytecode.StoreIndirectInstruction(0, type));
                 }
                 else
                     throw new NotImplementedException();
@@ -575,10 +494,12 @@ namespace tac2cil.Assembler
                 AddWithLabel(instructions, instruction.Label);
             }
 
-            public override void Visit(BranchInstruction instruction)
+            // this is an abstract class 
+            // we have implemented a visitor for each specialization
+            /*public override void Visit(BranchInstruction instruction)
             {
                 throw new NotImplementedException();
-            }
+            }*/
 
             public override void Visit(ExceptionalBranchInstruction instruction)
             {
@@ -726,9 +647,9 @@ namespace tac2cil.Assembler
             {
                 List<Bytecode.Instruction> instructions = new List<Bytecode.Instruction>()
                 {
-                    Push(instruction.TargetAddress, true),
+                    Push(instruction.TargetAddress, false),
                     // not sure if TargetAddress returns ptr<type> or type
-                    new Bytecode.InitObjInstruction(0, instruction.TargetAddress.Type),
+                    new Bytecode.InitObjInstruction(0, (instruction.TargetAddress.Type as PointerType).TargetType),
                 };
                 AddWithLabel(instructions, instruction.Label);
             }
