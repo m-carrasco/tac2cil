@@ -579,6 +579,12 @@ namespace tac2cil.Assembler
                 }
 
                 List<Bytecode.Instruction> instructions = instruction.Arguments.Select(arg => Push(arg)).ToList();
+
+                if (op == Bytecode.MethodCallOperation.Virtual &&
+                    instruction.Arguments.First().Type is PointerType ptrType &&
+                    ptrType.TargetType is IGenericParameterReference)
+                    instructions.Add(new Bytecode.ConstrainedInstruction(0, ptrType.TargetType));
+
                 instructions.Add(new Bytecode.MethodCallInstruction(0, op, instruction.Method));
 
                 if (instruction.HasResult)
