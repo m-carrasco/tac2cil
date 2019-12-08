@@ -113,7 +113,7 @@ namespace CecilProvider
                 switch (cciExceptionInfo.HandlerType)
                 {
                     case Cecil.Cil.ExceptionHandlerType.Filter:
-                        AnalysisNet.Types.IType filterExceptionType = typeExtractor.ExtractType(cciExceptionInfo.CatchType);
+                        AnalysisNet.Types.IType filterExceptionType = typeExtractor.ExtractType((Cecil.TypeReference)cciExceptionInfo.FilterStart.Operand);
                         AnalysisNet.FilterExceptionHandler filterHandler = new AnalysisNet.FilterExceptionHandler((uint)cciExceptionInfo.FilterStart.Offset, (uint)cciExceptionInfo.HandlerStart.Offset, (uint)cciExceptionInfo.HandlerEnd.Offset, filterExceptionType);
                         tryHandler.Handler = filterHandler;
                         break;
