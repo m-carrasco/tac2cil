@@ -208,7 +208,7 @@ namespace Tests
         {
             TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
         }
-        [Test, Sequential, Ignore("")]
+        [Test, Sequential]
         public void TestCecilProviderTac(
         [ValueSource("TestReturnValueSeeds")] string testSeed,
         [ValueSource("TestReturnValueParameters")] object parameters)
