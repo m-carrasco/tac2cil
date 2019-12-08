@@ -436,17 +436,17 @@ namespace tac2cil.Assembler
 
             public override void Visit(TryInstruction instruction)
             {
-                throw new NotImplementedException();
+                //throw new NotImplementedException();
             }
 
             public override void Visit(FaultInstruction instruction)
             {
-                throw new NotImplementedException();
+                //throw new NotImplementedException();
             }
 
             public override void Visit(FinallyInstruction instruction)
             {
-                throw new NotImplementedException();
+                //throw new NotImplementedException();
             }
 
             //public override void Visit(FilterInstruction instruction)
@@ -456,7 +456,7 @@ namespace tac2cil.Assembler
 
             public override void Visit(CatchInstruction instruction)
             {
-                throw new NotImplementedException();
+                //throw new NotImplementedException();
             }
 
             public override void Visit(ConvertInstruction instruction)
