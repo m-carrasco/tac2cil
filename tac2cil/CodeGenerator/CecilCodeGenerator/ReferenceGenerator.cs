@@ -162,7 +162,14 @@ namespace CodeGenerator.CecilCodeGenerator
 
             if (type is AnalysisNet.Types.FunctionPointerType functionPointerType)
             {
-                throw new NotImplementedException();
+                var funcPtr = new Cecil.FunctionPointerType()
+                {
+                    ReturnType = TypeReference(functionPointerType.ReturnType),
+                    HasThis = !functionPointerType.IsStatic,
+
+                };
+                funcPtr.Parameters.AddRange(functionPointerType.Parameters.Select(p => new Cecil.ParameterDefinition(TypeReference(p.Type))));
+                return funcPtr;
             }
 
             if (type is AnalysisNet.Types.PointerType pointerType)
