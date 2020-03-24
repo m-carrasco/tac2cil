@@ -93,7 +93,10 @@ namespace Tests
 
             // hack: we are assuming it is always a .dll
             output = output + ".dll";
-            System.Reflection.Assembly DLL = System.Reflection.Assembly.LoadFile(Path.Combine(outputDir, Path.GetFileName(output)));
+
+            var filePath = Path.Combine(outputDir, Path.GetFileName(output));
+            VerifyAssembly(filePath);
+            System.Reflection.Assembly DLL = System.Reflection.Assembly.LoadFile(filePath);
 
             Type type = DLL.GetType(typeName);
             System.Reflection.MethodInfo methodInfoStatic = type.GetMethod(method);
@@ -106,6 +109,14 @@ namespace Tests
             object result = methodInfoStatic.Invoke(null, parameters);
 
             return result;
+        }
+
+        public void VerifyAssembly(string filePath)
+        {
+            bool isMono = Type.GetType("Mono.Runtime") != null;
+            var shellOutput = isMono ? ShellService.PEDump(filePath) : ShellService.PEVerify(filePath);
+            if (shellOutput.ExitCode != 0)
+                throw new Exception(shellOutput.ToString());
         }
     }
 }
