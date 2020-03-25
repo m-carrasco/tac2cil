@@ -107,6 +107,7 @@
     <EmbeddedResource Include="Resources\Arrays2.cs" />
     <EmbeddedResource Include="Resources\IfConditionals2.cs" />
     <EmbeddedResource Include="Resources\Loop2.cs" />
+    <Compile Include="ShellService.cs" />
     <Compile Include="TestHandler.cs" />
     <Compile Include="Tests.cs" />
     <Compile Include="Compiler.cs" />

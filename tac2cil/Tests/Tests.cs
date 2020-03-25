@@ -181,27 +181,6 @@ namespace Tests
         }
 
         [Test, Sequential]
-        public void TestReturnValueCCINoTac(
-            [ValueSource("TestReturnValueSeeds")] string testSeed,
-            [ValueSource("TestReturnValueParameters")] object parameters)
-        {
-            TestReturnValue(testSeed, parameters, ProviderType.CCI, false);
-        }
-
-        [Test, Sequential, Ignore("metadata provider is failing for too many test cases")]
-        public void TestReturnValueMetadataProviderNoTac(
-        [ValueSource("TestReturnValueSeeds")] string testSeed,
-        [ValueSource("TestReturnValueParameters")] object parameters)
-        {
-            if (IgnoreInMetadataProvider(testSeed))
-            {
-                return;
-            }
-
-            TestReturnValue(testSeed, parameters, ProviderType.METADATA, false);
-        }
-
-        [Test, Sequential]
         public void TestCecilProviderSil(
         [ValueSource("TestReturnValueSeeds")] string testSeed,
         [ValueSource("TestReturnValueParameters")] object parameters)
@@ -257,30 +236,6 @@ namespace Tests
             // check results
             string output = File.ReadAllText(outputTxt);
             Assert.IsTrue(output.Contains("Test Count: 618, Passed: 618"));
-        }
-
-        private bool IgnoreInMetadataProvider(string testSeed)
-        {
-            HashSet<string> ignore = new HashSet<string>()
-            {
-                TestReturnValueSeeds[21],
-                TestReturnValueSeeds[22],
-                TestReturnValueSeeds[23],
-                TestReturnValueSeeds[24],
-                TestReturnValueSeeds[25],
-                TestReturnValueSeeds[26],
-                TestReturnValueSeeds[33],
-                TestReturnValueSeeds[34],
-                TestReturnValueSeeds[35],
-                TestReturnValueSeeds[36],
-            };
-
-            if (ignore.Contains(testSeed))
-            {
-                return true;
-            }
-
-            return false;
         }
     }
 }
