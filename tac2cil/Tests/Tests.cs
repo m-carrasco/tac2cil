@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 
@@ -14,165 +15,118 @@ namespace Tests
             return source;
         }
 
-        private static readonly string[] TestReturnValueSeeds =
+        public class TestCaseOptions
         {
-            "Tests.Resources.AccessIntField.cs/Test.Program/Test", // 0
-            "Tests.Resources.Sum.cs/Test.Program/Test", // 1
-            "Tests.Resources.RefParameter.cs/Test.Program/Test", // 2
-            "Tests.Resources.RefParameter.cs/Test.Program/TestBool", //3
-            "Tests.Resources.RefParameter.cs/Test.Program/TestFloat", // 4
-            "Tests.Resources.RefParameter.cs/Test.Program/TestObject", // 5
-            "Tests.Resources.RefParameter2.cs/Test.Program/TestInt", // 6
-            "Tests.Resources.RefParameter2.cs/Test.Program/TestBool", // 7
-            "Tests.Resources.RefParameter2.cs/Test.Program/TestFloat", // 8
-            "Tests.Resources.RefParameter2.cs/Test.Program/TestObject", // 9
-            "Tests.Resources.InOutParameters.cs/Test.Program/TestIn", // 10
-            "Tests.Resources.InOutParameters.cs/Test.Program/TestOut", // 11
+            public string File, ClassName, MethodName;
+            public object Parameter = null;
 
-            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 12
-            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 13
-            "Tests.Resources.IfConditionals.cs/Test.Program/Test", // 14
+            public TestCaseOptions(string file, string className, string methodName, object parameter = null)
+            {
+                File = file;
+                ClassName = className;
+                MethodName = methodName;
+                Parameter = parameter;
+            }
 
-            "Tests.Resources.Loop.cs/Test.Program/Test", // 15
-            "Tests.Resources.Loop.cs/Test.Program/Test", // 16
-
-            "Tests.Resources.Arrays.cs/Test.Program/Test1", // 17
-            "Tests.Resources.Arrays.cs/Test.Program/Test2", // 18
-            "Tests.Resources.Arrays.cs/Test.Program/Test3", // 19
-            "Tests.Resources.Arrays.cs/Test.Program/Test4", // 20
-
-            "Tests.Resources.Generics.cs/Test.Program/Test", // 21
-            "Tests.Resources.Generics.cs/Test.Program/Test1", // 22
-
-            "Tests.Resources.ExternGeneric.cs/Test.Program/Test", // 23
-            "Tests.Resources.ExternGeneric.cs/Test.Program/Test1", // 24
-
-            "Tests.Resources.GenericMethods.cs/Test.Program/Test", // 25
-
-            "Tests.Resources.GenericsWhere.cs/Test.Program/Test", // 26
-
-            "Tests.Resources.Interfaces.cs/Test.Program/Test1", // 27
-            "Tests.Resources.Interfaces.cs/Test.Program/Test2", // 28
-            "Tests.Resources.Interfaces.cs/Test.Program/Test3", // 29
-
-            "Tests.Resources.Inheritance.cs/Test.Program/Test1", //30
-            "Tests.Resources.Inheritance.cs/Test.Program/Test2", // 31
-            "Tests.Resources.Inheritance.cs/Test.Program/Test3", // 32
-
-            "Tests.Resources.GenericMethod2.cs/Test.Program/Test0", // 33
-            "Tests.Resources.GenericMethod2.cs/Test.Program/Test1", // 34
-
-            "Tests.Resources.ArrayList.cs/Test.Program/Test0", // 35
-            "Tests.Resources.NestedGenerics.cs/Test.Program/Test0", // 36
-            "Tests.Resources.ArrayList.cs/Test.Program/Test1", // 37
-            "Tests.Resources.ArrayList.cs/Test.Program/Test2", // 38
-            "Tests.Resources.ArrayList.cs/Test.Program/Test3", // 39
-            "Tests.Resources.ArrayList.cs/Test.Program/Test4", // 40
-            "Tests.Resources.ArrayList.cs/Test.Program/Test5", // 41
-            "Tests.Resources.ArrayList.cs/Test.Program/Test6", // 42
-            "Tests.Resources.ArrayList.cs/Test.Program/Test7", // 43
-            "Tests.Resources.ArrayList.cs/Test.Program/Test8", // 44
-            "Tests.Resources.ArrayList.cs/Test.Program/Test9", // 45
-            "Tests.Resources.ArrayList.cs/Test.Program/Test10", // 46
-            "Tests.Resources.ArrayList.cs/Test.Program/Test11", // 47
-
-            "Tests.Resources.Delegates.cs/Test.Program/Test0", // 48
-            "Tests.Resources.Delegates.cs/Test.Program/Test1", // 49
-            "Tests.Resources.Delegates.cs/Test.Program/Test2", // 50
-
-            "Tests.Resources.Switch.cs/Test.Program/Test", // 51
-            "Tests.Resources.Switch.cs/Test.Program/Test", // 52
-            "Tests.Resources.Switch.cs/Test.Program/Test", // 53
-
-            "Tests.Resources.Struct.cs/Test.Program/Test", // 54
-
-            "Tests.Resources.InOutParameters2.cs/Test.Program/Test1", // 55
-            "Tests.Resources.InOutParameters2.cs/Test.Program/Test2", // 56
-            "Tests.Resources.InOutParameters2.cs/Test.Program/Test3", // 57
-
-            "Tests.Resources.Arrays2.cs/Test.Program/Test", // 58
-
-            "Tests.Resources.IfConditionals2.cs/Test.Program/Test", // 59
-            "Tests.Resources.Loop2.cs/Test.Program/Test", // 60
-        };
-
-        private static readonly object[] TestReturnValueParameters =
+            public override string ToString()
+            {
+                return string.Format("File: {0} Class: {1} Method: {2}", File, ClassName, MethodName);
+            }
+        }
+        public class MyDataClass
         {
-            null, // 0
-            null, // 1
-            null, // 2
-            null, // 3
-            null, // 4
-            null, // 5
-            null, // 6
-            null, // 7
-            null, // 8
-            null, // 9
-            null, // 10
-            null, // 11
-            49, // 12
-            199, // 13
-            -2, // 14
-            0, // 15
-            8, // 16
-            null, // 17
-            null, // 18
-            null, // 19
-            null, // 20
-            null, // 21
-            null, // 22
-            null, //23
-            null, // 24
-            null, // 25
-            null, // 26
-            10, // 27
-            10, // 28
-            null, // 29
-            10, // 30
-            10, // 31
-            null, // 32
-            null, // 33
-            null, // 34
-            null, // 35
-            null, // 36
-            null, // 37
-            null, // 38
-            null, // 39
-            null, // 40
-            null, // 41
-            null, // 42
-            null, // 43
-            null, // 44
-            null, // 45
-            null, // 46
-            null, // 47
-            null, // 48
-            null, // 49
-            null, // 50
-            1,    // 51
-            2,    // 52
-            3,    // 53
-            null,  // 54
-            null,  // 55
-            null,  // 56
-            null,  // 57
-            null,  // 58
-            5,     // 59
-            5,     // 60
-        };
+            public static IEnumerable TestCases
+            {
+                get
+                {
+                    yield return new TestCaseData(new TestCaseOptions("AccessIntField.cs", "Test.Program", "Test")); //0
+                    yield return new TestCaseData(new TestCaseOptions("Sum.cs", "Test.Program", "Test")); //1
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter.cs", "Test.Program", "Test")); //2
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter.cs", "Test.Program", "TestBool")); //3
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter.cs", "Test.Program", "TestFloat")); // 4
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter.cs", "Test.Program", "TestObject")); // 5
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter2.cs", "Test.Program", "TestInt")); // 6
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter2.cs", "Test.Program", "TestBool")); // 7
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter2.cs", "Test.Program", "TestFloat")); // 8
+                    yield return new TestCaseData(new TestCaseOptions("RefParameter2.cs", "Test.Program", "TestObject")); // 9
+                    yield return new TestCaseData(new TestCaseOptions("InOutParameters.cs", "Test.Program", "TestIn")); // 10
+                    yield return new TestCaseData(new TestCaseOptions("InOutParameters.cs", "Test.Program", "TestOut")); // 11
 
-        private void TestReturnValue(string testSeed, object parameters, ProviderType providerType, bool tac)
+                    yield return new TestCaseData(new TestCaseOptions("IfConditionals.cs", "Test.Program", "Test", 49)); // 12
+                    yield return new TestCaseData(new TestCaseOptions("IfConditionals.cs", "Test.Program", "Test", 199)); // 13
+                    yield return new TestCaseData(new TestCaseOptions("IfConditionals.cs", "Test.Program", "Test",-2)); // 14
+
+                    yield return new TestCaseData(new TestCaseOptions("Loop.cs", "Test.Program", "Test", 0)); // 15
+                    yield return new TestCaseData(new TestCaseOptions("Loop.cs", "Test.Program", "Test", 8)); // 16
+
+                    yield return new TestCaseData(new TestCaseOptions("Arrays.cs", "Test.Program", "Test1")); // 17
+                    yield return new TestCaseData(new TestCaseOptions("Arrays.cs", "Test.Program", "Test2")); // 18
+                    yield return new TestCaseData(new TestCaseOptions("Arrays.cs", "Test.Program", "Test3")); // 19
+                    yield return new TestCaseData(new TestCaseOptions("Arrays.cs", "Test.Program", "Test4")); // 20
+
+                    yield return new TestCaseData(new TestCaseOptions("Generics.cs", "Test.Program", "Test")); // 21
+                    yield return new TestCaseData(new TestCaseOptions("Generics.cs", "Test.Program", "Test1")); // 22
+
+                    yield return new TestCaseData(new TestCaseOptions("ExternGeneric.cs", "Test.Program", "Test")); // 23
+                    yield return new TestCaseData(new TestCaseOptions("ExternGeneric.cs", "Test.Program", "Test1")); // 24
+
+                    yield return new TestCaseData(new TestCaseOptions("GenericMethods.cs", "Test.Program", "Test")); // 25
+
+                    yield return new TestCaseData(new TestCaseOptions("GenericsWhere.cs", "Test.Program", "Test")); // 26
+
+                    yield return new TestCaseData(new TestCaseOptions("Interfaces.cs", "Test.Program", "Test1", 10)); // 27
+                    yield return new TestCaseData(new TestCaseOptions("Interfaces.cs", "Test.Program", "Test2", 10)); // 28
+                    yield return new TestCaseData(new TestCaseOptions("Interfaces.cs", "Test.Program", "Test3")); // 29
+
+                    yield return new TestCaseData(new TestCaseOptions("Inheritance.cs", "Test.Program", "Test1", 10)); //30
+                    yield return new TestCaseData(new TestCaseOptions("Inheritance.cs", "Test.Program", "Test2", 10)); // 31
+                    yield return new TestCaseData(new TestCaseOptions("Inheritance.cs", "Test.Program", "Test3")); // 32
+
+                    yield return new TestCaseData(new TestCaseOptions("GenericMethod2.cs", "Test.Program", "Test0")); // 33
+                    yield return new TestCaseData(new TestCaseOptions("GenericMethod2.cs", "Test.Program", "Test1")); // 34
+
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test0")); // 35
+                    yield return new TestCaseData(new TestCaseOptions("NestedGenerics.cs", "Test.Program", "Test0")); // 36
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test1")); // 37
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test2")); // 38
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test3")); // 39
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test4")); // 40
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test5")); // 41
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test6")); // 42
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test7")); // 43
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test8")); // 44
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test9")); // 45
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test10")); // 46
+                    yield return new TestCaseData(new TestCaseOptions("ArrayList.cs", "Test.Program", "Test11")); // 47
+
+                    yield return new TestCaseData(new TestCaseOptions("Delegates.cs", "Test.Program", "Test0")).Ignore("issues with function pointer types"); // 48
+                    yield return new TestCaseData(new TestCaseOptions("Delegates.cs", "Test.Program", "Test1")).Ignore("issues with function pointer types"); // 49
+                    yield return new TestCaseData(new TestCaseOptions("Delegates.cs", "Test.Program", "Test2")).Ignore("issues with function pointer types"); // 50
+
+                    yield return new TestCaseData(new TestCaseOptions("Switch.cs", "Test.Program", "Test",1)); // 51
+                    yield return new TestCaseData(new TestCaseOptions("Switch.cs", "Test.Program", "Test",2)); // 52
+                    yield return new TestCaseData(new TestCaseOptions("Switch.cs", "Test.Program", "Test",3)); // 53
+
+                    yield return new TestCaseData(new TestCaseOptions("Struct.cs", "Test.Program", "Test")); // 54
+
+                    yield return new TestCaseData(new TestCaseOptions("InOutParameters2.cs", "Test.Program", "Test1")); // 55
+                    yield return new TestCaseData(new TestCaseOptions("InOutParameters2.cs", "Test.Program", "Test2")); // 56
+                    yield return new TestCaseData(new TestCaseOptions("InOutParameters2.cs", "Test.Program", "Test3")); // 57
+
+                    yield return new TestCaseData(new TestCaseOptions("Arrays2.cs", "Test.Program", "Test")).Ignore("issues with function pointer types"); // 58
+
+                    yield return new TestCaseData(new TestCaseOptions("IfConditionals2.cs", "Test.Program", "Test", 5)); // 59
+                    yield return new TestCaseData(new TestCaseOptions("Loop2.cs", "Test.Program", "Test", 5)); // 60
+                }
+            }
+        }
+
+        // compares the result of the normal exectuable vs the one generated by the library
+        private void TestSourceCodeByReturnValue(string sourceCodeFile, string type, string method, object parameter, ProviderType providerType, bool tac)
         {
-            char[] s = { '/' };
-            string[] resourceToTest = testSeed.Split(s);
-
-            string sourceCodeResource = resourceToTest[0];
-            string type = resourceToTest[1];
-            string method = resourceToTest[2];
-
-            string source = GetResourceAsString(sourceCodeResource);
+            string source = GetResourceAsString(sourceCodeFile);
             TestHandler testHandler = new TestHandler();
-            object[] param = parameters == null ? null : new object[1] { parameters };
+            object[] param = parameter == null ? null : new object[1] { parameter };
 
             object r = testHandler.Test(source, type, method, param, tac, providerType);
             object expectedResult = testHandler.RunOriginalCode(source, type, method, param);
@@ -180,24 +134,20 @@ namespace Tests
             Assert.AreEqual(expectedResult, r);
         }
 
-        [Test, Sequential]
-        public void TestCecilProviderSil(
-        [ValueSource("TestReturnValueSeeds")] string testSeed,
-        [ValueSource("TestReturnValueParameters")] object parameters)
+        [TestCaseSource(typeof(MyDataClass), "TestCases")]
+        public void Sil2Cil(TestCaseOptions options)
         {
-            TestReturnValue(testSeed, parameters, ProviderType.CECIL, false);
-        }
-        [Test, Sequential]
-        public void TestCecilProviderTac(
-        [ValueSource("TestReturnValueSeeds")] string testSeed,
-        [ValueSource("TestReturnValueParameters")] object parameters)
-        {
-            TestReturnValue(testSeed, parameters, ProviderType.CECIL, true);
+            TestSourceCodeByReturnValue("Tests.Resources." + options.File, options.ClassName, options.MethodName, options.Parameter, ProviderType.CECIL, false);
         }
 
+        [TestCaseSource(typeof(MyDataClass), "TestCases")]
+        public void Tac2Cil(TestCaseOptions options)
+        {
+            TestSourceCodeByReturnValue("Tests.Resources." + options.File, options.ClassName, options.MethodName, options.Parameter, ProviderType.CECIL, true);
+        }
 
         [Test]
-        public void TestCompileDSAWithCecilProvider()
+        public void DSA_Sil2Cil()
         {
             Model.Host host = new Model.Host();
             Model.ILoader provider = new CecilProvider.Loader(host);
