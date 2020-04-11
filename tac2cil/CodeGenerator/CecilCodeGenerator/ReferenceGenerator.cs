@@ -315,34 +315,11 @@ namespace CodeGenerator.CecilCodeGenerator
 
         private Cecil.TypeReference TypeReferenceToPlatformType(AnalysisNet.Types.IBasicType basicType)
         {
-            if (basicType.Equals(Model.Types.PlatformTypes.Object))
+            if (basicType is AnalysisNet.Types.PlatformType platformType)
             {
-                return Context.CurrentModule.TypeSystem.Object;
-            }
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Void))
-            {
-                return Context.CurrentModule.TypeSystem.Void;
-            }
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Int32))
-            {
-                return Context.CurrentModule.TypeSystem.Int32;
-            }
-
-            if (basicType.Equals(Model.Types.PlatformTypes.String))
-            {
-                return Context.CurrentModule.TypeSystem.String;
-            }
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Boolean))
-            {
-                return Context.CurrentModule.TypeSystem.Boolean;
-            }
-
-            if (basicType.Equals(Model.Types.PlatformTypes.Single))
-            {
-                return Context.CurrentModule.TypeSystem.Single;
+                var specificImplementation = platformType.ToImplementation(Context.CurrentModule.TypeSystem.CoreLibrary.Name);
+                specificImplementation.Resolve(Context.Host);
+                return TypeReference(specificImplementation);
             }
 
             return null;

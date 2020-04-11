@@ -656,7 +656,7 @@ namespace CecilProvider
 
         public AnalysisNet.Types.IMetadataReference ExtractToken(Cecil.MemberReference token)
         {
-            AnalysisNet.Types.IMetadataReference result = AnalysisNet.Types.PlatformTypes.Unknown;
+            AnalysisNet.Types.IMetadataReference result = AnalysisNet.Types.PlatformType.Unknown;
 
             if (token is Cecil.MethodReference methodRef)
             {
@@ -719,7 +719,7 @@ namespace CecilProvider
                 containingType = (AnalysisNet.Types.IBasicType)extractedType;
             }
 
-            AnalysisNet.Types.MethodReference method = new AnalysisNet.Types.MethodReference(methodref.Name, AnalysisNet.Types.PlatformTypes.Void);
+            AnalysisNet.Types.MethodReference method = new AnalysisNet.Types.MethodReference(methodref.Name, AnalysisNet.Types.PlatformType.Void);
             genericParameterExtractor.MapGenericParameters(methodref, method);
             method.ReturnType = ExtractType(methodref.ReturnType);
 

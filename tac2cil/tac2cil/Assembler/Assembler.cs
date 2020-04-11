@@ -410,7 +410,7 @@ namespace tac2cil.Assembler
                 {
                     instructions.Add(Push(dereference.Reference));
                     instructions.Add(Push(instruction.Operand));
-                    var type = dereference.Type.Equals(PlatformTypes.Boolean) ? PlatformTypes.SByte : dereference.Type;
+                    var type = dereference.Type.Equals(PlatformType.Boolean) ? PlatformType.SByte : dereference.Type;
 
                     instructions.Add(new Bytecode.StoreIndirectInstruction(0, type));
                 }

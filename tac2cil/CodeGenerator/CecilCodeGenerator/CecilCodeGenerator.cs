@@ -76,7 +76,7 @@ namespace CodeGenerator.CecilCodeGenerator
                 AssemblyDefinition cecilAssembly = keyval.Value;
                 Model.Assembly analysisNetAssembly = keyval.Key;
 
-                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, modelMapping));
+                ReferenceGenerator referenceGen = new ReferenceGenerator(new Context(cecilAssembly.MainModule, modelMapping, Host));
 
                 // TraverseTypes returns every nested type in A before returning A
                 // this is assumed by the TypeGenerator and MethodGenerator

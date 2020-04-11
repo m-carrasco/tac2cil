@@ -275,21 +275,21 @@ namespace CecilProvider
                 case Mono.Cecil.Cil.Code.Stelem_I:
                 case Mono.Cecil.Cil.Code.Conv_I:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_I:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_I_Un: return PlatformTypes.IntPtr;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_I_Un: return PlatformType.IntPtr;
                 case Mono.Cecil.Cil.Code.Ldelem_I1:
                 case Mono.Cecil.Cil.Code.Ldind_I1:
                 case Mono.Cecil.Cil.Code.Stind_I1:
                 case Mono.Cecil.Cil.Code.Stelem_I1:
                 case Mono.Cecil.Cil.Code.Conv_I1:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_I1:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_I1_Un: return PlatformTypes.Int8;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_I1_Un: return PlatformType.Int8;
                 case Mono.Cecil.Cil.Code.Ldelem_I2:
                 case Mono.Cecil.Cil.Code.Ldind_I2:
                 case Mono.Cecil.Cil.Code.Stind_I2:
                 case Mono.Cecil.Cil.Code.Stelem_I2:
                 case Mono.Cecil.Cil.Code.Conv_I2:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_I2:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_I2_Un: return PlatformTypes.Int16;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_I2_Un: return PlatformType.Int16;
                 case Mono.Cecil.Cil.Code.Ldelem_I4:
                 case Mono.Cecil.Cil.Code.Ldc_I4:
                 case Mono.Cecil.Cil.Code.Ldc_I4_0:
@@ -308,7 +308,7 @@ namespace CecilProvider
                 case Mono.Cecil.Cil.Code.Stelem_I4:
                 case Mono.Cecil.Cil.Code.Conv_I4:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_I4:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_I4_Un: return PlatformTypes.Int32;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_I4_Un: return PlatformType.Int32;
                 case Mono.Cecil.Cil.Code.Ldelem_I8:
                 case Mono.Cecil.Cil.Code.Ldc_I8:
                 case Mono.Cecil.Cil.Code.Ldind_I8:
@@ -316,49 +316,49 @@ namespace CecilProvider
                 case Mono.Cecil.Cil.Code.Stelem_I8:
                 case Mono.Cecil.Cil.Code.Conv_I8:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_I8:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_I8_Un: return PlatformTypes.Int64;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_I8_Un: return PlatformType.Int64;
                 case Mono.Cecil.Cil.Code.Conv_U:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U_Un:
-                case Mono.Cecil.Cil.Code.Ldlen: return PlatformTypes.UIntPtr;
+                case Mono.Cecil.Cil.Code.Ldlen: return PlatformType.UIntPtr;
                 case Mono.Cecil.Cil.Code.Ldelem_U1:
                 case Mono.Cecil.Cil.Code.Ldind_U1:
                 case Mono.Cecil.Cil.Code.Conv_U1:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U1:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_U1_Un: return PlatformTypes.UInt8;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_U1_Un: return PlatformType.UInt8;
                 case Mono.Cecil.Cil.Code.Ldelem_U2:
                 case Mono.Cecil.Cil.Code.Ldind_U2:
                 case Mono.Cecil.Cil.Code.Conv_U2:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U2:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_U2_Un: return PlatformTypes.UInt16;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_U2_Un: return PlatformType.UInt16;
                 case Mono.Cecil.Cil.Code.Ldelem_U4:
                 case Mono.Cecil.Cil.Code.Ldind_U4:
                 case Mono.Cecil.Cil.Code.Conv_U4:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U4:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U4_Un:
-                case Mono.Cecil.Cil.Code.Sizeof: return PlatformTypes.UInt32;
+                case Mono.Cecil.Cil.Code.Sizeof: return PlatformType.UInt32;
                 case Mono.Cecil.Cil.Code.Conv_U8:
                 case Mono.Cecil.Cil.Code.Conv_Ovf_U8:
-                case Mono.Cecil.Cil.Code.Conv_Ovf_U8_Un: return PlatformTypes.UInt64;
+                case Mono.Cecil.Cil.Code.Conv_Ovf_U8_Un: return PlatformType.UInt64;
                 case Mono.Cecil.Cil.Code.Ldelem_R4:
                 case Mono.Cecil.Cil.Code.Ldc_R4:
                 case Mono.Cecil.Cil.Code.Ldind_R4:
                 case Mono.Cecil.Cil.Code.Stind_R4:
                 case Mono.Cecil.Cil.Code.Stelem_R4:
-                case Mono.Cecil.Cil.Code.Conv_R4: return PlatformTypes.Float32;
+                case Mono.Cecil.Cil.Code.Conv_R4: return PlatformType.Float32;
                 case Mono.Cecil.Cil.Code.Ldelem_R8:
                 case Mono.Cecil.Cil.Code.Ldc_R8:
                 case Mono.Cecil.Cil.Code.Ldind_R8:
                 case Mono.Cecil.Cil.Code.Stind_R8:
                 case Mono.Cecil.Cil.Code.Stelem_R8:
                 case Mono.Cecil.Cil.Code.Conv_R8:
-                case Mono.Cecil.Cil.Code.Conv_R_Un: return PlatformTypes.Float64;
+                case Mono.Cecil.Cil.Code.Conv_R_Un: return PlatformType.Float64;
                 case Mono.Cecil.Cil.Code.Ldelem_Ref:
                 case Mono.Cecil.Cil.Code.Stelem_Ref:
                 case Mono.Cecil.Cil.Code.Stind_Ref:
                 case Mono.Cecil.Cil.Code.Ldind_Ref:
-                case Mono.Cecil.Cil.Code.Ldnull: return PlatformTypes.Object;
-                case Mono.Cecil.Cil.Code.Ldstr: return PlatformTypes.String;
+                case Mono.Cecil.Cil.Code.Ldnull: return PlatformType.Object;
+                case Mono.Cecil.Cil.Code.Ldstr: return PlatformType.String;
 
                 default: return null;
             }
