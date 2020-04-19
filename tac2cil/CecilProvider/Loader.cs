@@ -1,4 +1,4 @@
-﻿// Copyright (c) Edgardo Zoppi.  All Rights Reserved.  Licensed under the MIT License.  See License.txt in the project root for license information.
+// Copyright (c) Edgardo Zoppi.  All Rights Reserved.  Licensed under the MIT License.  See License.txt in the project root for license information.
 
 using Model;
 using System;
@@ -30,6 +30,14 @@ namespace CecilProvider
             Cecil.ModuleDefinition module = Cecil.ModuleDefinition.ReadModule(fileName);
             Cecil.DefaultAssemblyResolver assemblyResolver = module.AssemblyResolver as Cecil.DefaultAssemblyResolver;
             assemblyResolver.AddSearchDirectory(Path.GetDirectoryName(Path.GetFullPath(fileName)));
+            Assembly assembly = ExtractAssembly(module);
+            ourHost.Assemblies.Add(assembly);
+            return assembly;
+        }
+
+        public Assembly LoadAssembly(Stream stream) {
+            Cecil.ModuleDefinition module = Cecil.ModuleDefinition.ReadModule(stream);
+            Cecil.DefaultAssemblyResolver assemblyResolver = module.AssemblyResolver as Cecil.DefaultAssemblyResolver;
             Assembly assembly = ExtractAssembly(module);
             ourHost.Assemblies.Add(assembly);
             return assembly;
